@@ -32,6 +32,16 @@
 - Java 21 이상
 - OracleDB 18c XE 이상
 
+### 환경변수 설정 가이드
+하나하나 윈도우 환경변수에 추가하기에는 번거롭기 때문에 
+외부 라이브러리를 의존성에 추가하여 
+.env파일에 application.yaml에 넣을 값을 정리하고자 합니다.
+
+**1.의존성 추가**
+build.gradle dependency에 dotenv-java 라이브러리를 추가합니다
+``` implementation 'io.github.cdimascio:dotenv-java:3.0.0' ```
+이후 src폴더와 동일 위치에 .env파일을 생성하여 .env.example에 적혀있는 양식대로 본인에게 맞는 값을 입력합니다.
+
 ### REST API Documentation
 ![Swagger-UI]((http://localhost:8080/swagger-ui/index.html))
 
