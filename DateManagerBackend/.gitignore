@@ -1,5 +1,4 @@
 HELP.md
-.env
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
@@ -36,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# 비밀 환경 변수 파일 제외 (추가!)
+.env
