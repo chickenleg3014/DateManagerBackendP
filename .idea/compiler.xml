@@ -7,6 +7,19 @@
         <processorPath useClasspath="false">
           <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.46/a5cfe99fdf320e84955ef653f2ce1bf789d11385/lombok-1.18.46.jar" />
         </processorPath>
+<<<<<<< HEAD
+        <module name="org.ict.DateManagerBackend.main" />
+        <module name="org.ict.DateManagerBackend.test" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="org.ict.DateManagerBackend" options="-parameters" />
+      <module name="org.ict.DateManagerBackend.main" options="-parameters" />
+      <module name="org.ict.DateManagerBackend.test" options="-parameters" />
+    </option>
+=======
         <module name="DateManagerBackend.test" />
         <module name="DateManagerBackend.main" />
       </profile>
@@ -15,5 +28,6 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_STRING" value="-parameters" />
+>>>>>>> 8575d4eab3691279be1443d83dec527180d95df9
   </component>
 </project>
