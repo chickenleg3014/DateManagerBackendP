@@ -7,7 +7,7 @@ spring:
     #데이터베이스 연결 설정(드라이버/URL/접속 계정)
   datasource:
     driver-class-name: oracle.jdbc.OracleDriver
-    url: jdbc:oracle:thin:@localhost:1521:XEPDB1
+    url: jdbc:oracle:thin:@localhost:1521/XEPDB1
     username: ${ORACLE_USERNAME}
     password: ${ORACLE_PASSWORD}
   jpa:
