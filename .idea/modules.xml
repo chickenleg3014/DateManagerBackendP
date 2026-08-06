@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/DateManagerBackend.iml" filepath="$PROJECT_DIR$/.idea/DateManagerBackend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.ict.DateManagerBackend.main.iml" filepath="$PROJECT_DIR$/.idea/modules/org.ict.DateManagerBackend.main.iml" />
     </modules>
   </component>
 </project>
