@@ -107,14 +107,24 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 return;
             }
             // 같은 이메일의 순수 소셜 계정(다른 provider)이 있으면 그 유저에 연동, 없으면 신규 생성
-            user = existingByEmail.orElseGet(() -> userRepository.save(new User(email, nickname, "UNKNOWN", null)));
+            user = existingByEmail.orElseGet(() -> userRepository.save(User.builder()
+                    .email(email)
+                    .nickname(nickname)
+                    .gender("UNKNOWN")
+                    .passwordHash(null)
+                    .build()));
 
             OAuth2AuthorizedClient authorizedClient =
                     authorizedClientService.loadAuthorizedClient(registrationId, authToken.getName());
             String accessTokenValue = authorizedClient != null
                     ? authorizedClient.getAccessToken().getTokenValue()
                     : null;
-            socialAccountRepository.save(new SocialAccount(user.getId(), providerKey, providerUserId, accessTokenValue));
+            socialAccountRepository.save(SocialAccount.builder()
+                    .userId(user.getId())
+                    .provider(providerKey)
+                    .providerUserId(providerUserId)
+                    .accessToken(accessTokenValue)
+                    .build());
         }
 
         // 여기까지 오면 user가 확정된 상태. 우리 서비스 전용 JWT를 만들어서

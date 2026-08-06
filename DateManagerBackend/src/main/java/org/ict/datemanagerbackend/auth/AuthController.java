@@ -47,8 +47,12 @@ public class AuthController {
             return ResponseEntity.status(409).body(Map.of("error", "이미 가입된 이메일입니다"));
         }
         String gender = isBlank(req.gender()) ? "UNKNOWN" : req.gender();
-        User user = userRepository.save(
-                new User(req.email(), req.nickname(), gender, passwordEncoder.encode(req.password())));
+        User user = userRepository.save(User.builder()
+                .email(req.email())
+                .nickname(req.nickname())
+                .gender(gender)
+                .passwordHash(passwordEncoder.encode(req.password()))
+                .build());
         String token = jwtService.generateToken(user.getId(), user.getEmail());
         return ResponseEntity.ok(Map.of("token", token));
     }
