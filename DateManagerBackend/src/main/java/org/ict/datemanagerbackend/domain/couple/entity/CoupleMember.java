@@ -1,4 +1,4 @@
-package org.ict.datemanagerbackend.couple;
+package org.ict.datemanagerbackend.domain.couple.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
