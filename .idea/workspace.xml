@@ -5,13 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f22a8bca-b98c-40f6-b5a8-9d4a8ec2f9dd" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/modules/org.ict.DateManagerBackend.main.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dictionaries/project.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/DateManagerBackendApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/DateManagerBackendApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/place/entity/Place.java" beforeDir="false" afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/place/entity/Place.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DateManagerBackend/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/resources/application.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -155,7 +153,7 @@
     "ignore.virus.scanning.warn.message": "true",
     "junie.onboarding.icon.badge.shown": "true",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/ICT-05/Documents/GitHub/DateManagerBackend",
+    "last_opened_file_path": "C:/Users/ICT-0/Projects/Date_manager/backend",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -185,14 +183,6 @@
       </method>
     </configuration>
   </component>
-  <component name="SharedIndexes">
-    <attachedChunks>
-      <set>
-        <option value="bundled-jdk-30f59d01ecdd-37e91769500f-intellij.indexing.shared.core-IU-261.25134.95" />
-        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-IU-261.25134.95" />
-      </set>
-    </attachedChunks>
-  </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="f22a8bca-b98c-40f6-b5a8-9d4a8ec2f9dd" name="Changes" comment="" />
@@ -203,6 +193,7 @@
       <workItem from="1785819324134" duration="6334000" />
       <workItem from="1785919362639" duration="728000" />
       <workItem from="1785975574204" duration="4088000" />
+      <workItem from="1786177394311" duration="570000" />
     </task>
     <servers />
   </component>
