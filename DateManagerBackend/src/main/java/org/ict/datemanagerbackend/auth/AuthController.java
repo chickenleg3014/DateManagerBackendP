@@ -1,8 +1,8 @@
 package org.ict.datemanagerbackend.auth;
 
 import org.ict.datemanagerbackend.config.JwtService;
-import org.ict.datemanagerbackend.user.User;
-import org.ict.datemanagerbackend.user.UserRepository;
+import org.ict.datemanagerbackend.domain.user.entity.User;
+import org.ict.datemanagerbackend.domain.user.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;

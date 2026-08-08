@@ -1,10 +1,10 @@
 package org.ict.datemanagerbackend.auth;
 
 import org.ict.datemanagerbackend.config.JwtService;
-import org.ict.datemanagerbackend.user.SocialAccount;
-import org.ict.datemanagerbackend.user.SocialAccountRepository;
-import org.ict.datemanagerbackend.user.User;
-import org.ict.datemanagerbackend.user.UserRepository;
+import org.ict.datemanagerbackend.domain.user.entity.SocialAccount;
+import org.ict.datemanagerbackend.domain.user.repository.SocialAccountRepository;
+import org.ict.datemanagerbackend.domain.user.entity.User;
+import org.ict.datemanagerbackend.domain.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;

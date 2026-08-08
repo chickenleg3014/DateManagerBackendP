@@ -1,5 +1,7 @@
-package org.ict.datemanagerbackend.user;
+package org.ict.datemanagerbackend.domain.user.controller;
 
+import org.ict.datemanagerbackend.domain.user.entity.User;
+import org.ict.datemanagerbackend.domain.user.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
