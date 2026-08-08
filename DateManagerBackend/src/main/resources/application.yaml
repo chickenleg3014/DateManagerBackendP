@@ -102,3 +102,7 @@ app:
 #KOPIS(공연예술통합전산망) 공연 목록 API 인증키 - PlaceSyncService에서 사용
 kopis:
   service-key: ${KOPIS_SERVICE_KEY}
+
+#기상청 API 허브 인증키 - WeatherService에서 사용 (프론트엔드에는 노출하지 않음)
+kma:
+  auth-key: ${KMA_AUTH_KEY}
