@@ -15,8 +15,8 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-// Setter는 실제로 값이 바뀌어야 하는 nickname/gender에만 붙인다.
-// id/email/passwordHash/createdAt은 생성 시점(Builder) 이후로는 절대 바뀌면 안 되는 값이라 setter를 열지 않는다.
+// Setter는 실제로 값이 바뀌어야 하는 nickname/gender/passwordHash(비밀번호 변경)에만 붙인다.
+// id/email/createdAt은 생성 시점(Builder) 이후로는 절대 바뀌면 안 되는 값이라 setter를 열지 않는다.
 @Entity
 @Table(name = "users")
 @Getter
@@ -40,6 +40,7 @@ public class User {
     @Column(nullable = false)
     private String gender;
 
+    @Setter
     @Column(name = "password_hash")
     private String passwordHash;
 

@@ -66,7 +66,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             providerUserId = String.valueOf(attrs.get("sub"));
             email = (String) attrs.get("email");
             nickname = attrs.get("name") != null ? (String) attrs.get("name") : email;
-        } else {
+        } else if ("kakao".equals(registrationId)) {
             // 카카오는 attrs.get("id")가 고유 id이고, 닉네임은 kakao_account.profile.nickname 안에 중첩되어 있음.
             // scope에 email 동의를 안 받았기 때문에(application.yaml scope: profile_nickname만 요청)
             // 실제 카카오 이메일은 안 주고, provider id로 우리 쪽에서 가짜 이메일을 만들어 쓴다.
@@ -83,6 +83,17 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             }
             nickname = kakaoNickname != null ? kakaoNickname : "카카오유저";
             email = "kakao_" + providerUserId + "@kakao.local";
+        } else {
+            // 네이버는 실제 사용자 정보가 최상위가 아니라 response 필드 안에 중첩되어 내려온다
+            // (application.yaml의 provider.naver.user-name-attribute: response 설정과 연결됨)
+            @SuppressWarnings("unchecked")
+            Map<String, Object> naverResponse = (Map<String, Object>) attrs.get("response");
+            providerUserId = String.valueOf(naverResponse.get("id"));
+            String naverEmail = (String) naverResponse.get("email");
+            String naverNickname = (String) naverResponse.get("name");
+            nickname = naverNickname != null ? naverNickname : "네이버유저";
+            // scope에 email 동의를 안 받은 경우 대비 (구글/카카오와 동일한 방식으로 대체 이메일 생성)
+            email = naverEmail != null ? naverEmail : "naver_" + providerUserId + "@naver.local";
         }
 
         // DB의 social_accounts.provider 컬럼과 맞추기 위해 대문자로 통일 (GOOGLE / KAKAO)
