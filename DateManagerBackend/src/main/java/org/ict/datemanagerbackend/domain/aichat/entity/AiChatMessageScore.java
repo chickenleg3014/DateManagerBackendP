@@ -21,8 +21,9 @@ public class AiChatMessageScore {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id; // 점수 매핑 ID (PK)
 
-  @Column(name = "message_id", nullable = false)
-  private Long messageId; // 메시지 ID (ai_chat_messages.id 참조)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "message_id", nullable = false)
+  private AiChatMessage message; // 메시지 (ai_chat_messages.id 참조)
 
   @Column(name = "score_type", nullable = false, length = 30)
   private String scoreType; // 점수 종류 (ENERGY 등)

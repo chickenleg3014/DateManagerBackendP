@@ -2,7 +2,10 @@ package org.ict.datemanagerbackend.domain.place.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -23,8 +26,9 @@ import java.time.LocalDateTime;
 public class PlaceStyle {
 
   @Id
-  @Column(name = "place_id")
-  private Long placeId; // 장소 ID (1:1 관계, places.id 참조 / PK)
+  @OneToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "place_id")
+  private Place place; // 장소와 PK를 공유하는 1:1 관계
 
   @Column(name = "score_energy", nullable = false, insertable = false, updatable = false)
   private Integer scoreEnergy; // 에너지 성향 점수 (DB 기본값 활용)

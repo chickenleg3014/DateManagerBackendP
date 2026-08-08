@@ -2,7 +2,10 @@ package org.ict.datemanagerbackend.domain.user.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -14,7 +17,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 // Setter는 실제로 값이 바뀌어야 하는 init_* 점수 필드에만 붙인다 (성향 재검사 시 갱신됨).
-// userId는 users.id와 1:1인 PK/FK라 생성 이후 절대 바뀌면 안 되고, updatedAt은 DB가 관리하는 값이라 setter를 열지 않는다.
+// user는 users.id와 PK를 공유하는 1:1 관계라 생성 이후 절대 바뀌면 안 되고, updatedAt은 DB가 관리하는 값이라 setter를 열지 않는다.
 @Entity
 @Table(name = "user_styles")
 @Getter
@@ -24,8 +27,9 @@ import java.time.LocalDateTime;
 public class UserStyle {
 
   @Id
-  @Column(name = "user_id")
-  private Long userId; // users.id와 1:1 관계 (PK이자 FK)
+  @OneToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id")
+  private User user; // users.id와 PK를 공유하는 1:1 관계
 
   @Setter
   @Column(name = "init_energy")

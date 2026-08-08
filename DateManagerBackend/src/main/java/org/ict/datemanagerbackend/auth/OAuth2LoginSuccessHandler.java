@@ -106,7 +106,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         User user;
         if (existingLink.isPresent()) {
             // 이전에 이 소셜 계정으로 로그인한 적이 있음 -> social_accounts에 연결된 user를 그대로 사용
-            user = userRepository.findById(existingLink.get().getUserId())
+            user = userRepository.findById(existingLink.get().getUser().getId())
                     .orElseThrow(() -> new IllegalStateException("연동된 유저를 찾을 수 없습니다"));
         } else {
             java.util.Optional<User> existingByEmail = userRepository.findByEmail(email);
@@ -131,7 +131,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                     ? authorizedClient.getAccessToken().getTokenValue()
                     : null;
             socialAccountRepository.save(SocialAccount.builder()
-                    .userId(user.getId())
+                    .user(user)
                     .provider(providerKey)
                     .providerUserId(providerUserId)
                     .accessToken(accessTokenValue)

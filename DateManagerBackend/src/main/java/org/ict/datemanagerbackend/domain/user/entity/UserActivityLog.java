@@ -2,9 +2,12 @@ package org.ict.datemanagerbackend.domain.user.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -28,8 +31,9 @@ public class UserActivityLog {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id; // 행동 로그 ID (PK)
 
-  @Column(name = "user_id", nullable = false)
-  private Long userId; // 유저 ID (1:N 관계, users.id 참조)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user; // 유저 (1:N 관계, users.id 참조)
 
   @Column(name = "activity_type", nullable = false)
   private String activityType; // 로그 유형 (AI_FEEDBACK 등)

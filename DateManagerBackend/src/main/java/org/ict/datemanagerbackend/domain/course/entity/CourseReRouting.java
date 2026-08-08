@@ -2,6 +2,7 @@ package org.ict.datemanagerbackend.domain.course.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.ict.datemanagerbackend.domain.place.entity.Place;
 import java.time.LocalDateTime;
 
 @Entity
@@ -17,17 +18,20 @@ public class CourseReRouting {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name = "course_group_id", nullable = false)
-  private Long courseGroupId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "course_group_id", nullable = false)
+  private CourseGroup courseGroup;
 
   @Column(name = "sequence", nullable = false)
   private Integer sequence;
 
-  @Column(name = "original_place_id", nullable = false)
-  private Long originalPlaceId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "original_place_id", nullable = false)
+  private Place originalPlace;
 
-  @Column(name = "replaced_place_id", nullable = false)
-  private Long replacedPlaceId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "replaced_place_id", nullable = false)
+  private Place replacedPlace;
 
   @Column(name = "trigger_type", nullable = false)
   private String triggerType;

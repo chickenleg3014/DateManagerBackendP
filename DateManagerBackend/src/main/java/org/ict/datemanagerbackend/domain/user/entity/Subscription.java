@@ -2,9 +2,12 @@ package org.ict.datemanagerbackend.domain.user.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -28,8 +31,9 @@ public class Subscription {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id; // 구독 고유 ID (PK)
 
-  @Column(name = "user_id", nullable = false)
-  private Long userId; // 회원 ID (users.id 참조)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user; // 회원 (users.id 참조)
 
   @Column(name = "plan_code", nullable = false)
   private String planCode; // 구독 플랜 코드 (FREE, PREMIUM_MONTHLY 등)

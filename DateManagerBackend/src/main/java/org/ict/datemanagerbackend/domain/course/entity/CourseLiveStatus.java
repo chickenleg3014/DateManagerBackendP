@@ -14,8 +14,9 @@ import java.time.LocalDateTime;
 public class CourseLiveStatus {
 
   @Id
-  @Column(name = "course_group_id")
-  private Long courseGroupId;
+  @OneToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "course_group_id")
+  private CourseGroup courseGroup; // 코스 그룹과 PK를 공유하는 1:1 관계
 
   @Column(name = "is_live_active", nullable = false, insertable = false, updatable = false)
   private Integer isLiveActive;

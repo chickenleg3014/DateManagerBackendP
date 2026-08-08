@@ -17,8 +17,9 @@ public class CourseNotificationLog {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name = "course_group_id", nullable = false)
-  private Long courseGroupId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "course_group_id", nullable = false)
+  private CourseGroup courseGroup;
 
   @Column(name = "notification_type", nullable = false)
   private String notificationType;

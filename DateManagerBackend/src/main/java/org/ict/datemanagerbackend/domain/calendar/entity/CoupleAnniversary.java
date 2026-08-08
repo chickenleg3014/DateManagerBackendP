@@ -2,6 +2,7 @@ package org.ict.datemanagerbackend.domain.calendar.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.ict.datemanagerbackend.domain.couple.entity.Couple;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -23,8 +24,9 @@ public class CoupleAnniversary {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id; // 기념일 ID (PK)
 
-  @Column(name = "couple_id", nullable = false)
-  private Long coupleId; // 커플 ID (couples.id 참조)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "couple_id", nullable = false)
+  private Couple couple; // 커플 (couples.id 참조)
 
   @Column(name = "title", nullable = false, length = 100)
   private String title; // 기념일 명칭

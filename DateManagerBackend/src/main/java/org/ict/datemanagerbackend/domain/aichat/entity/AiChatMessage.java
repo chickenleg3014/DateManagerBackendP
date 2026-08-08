@@ -2,6 +2,7 @@ package org.ict.datemanagerbackend.domain.aichat.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.ict.datemanagerbackend.domain.user.entity.User;
 import java.time.LocalDateTime;
 
 @Entity
@@ -17,14 +18,16 @@ public class AiChatMessage {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id; // 메시지 ID (PK)
 
-  @Column(name = "session_id", nullable = false)
-  private Long sessionId; // 세션 ID (ai_chat_sessions.id 참조)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "session_id", nullable = false)
+  private AiChatSession session; // 세션 (ai_chat_sessions.id 참조)
 
   @Column(name = "sender_type", nullable = false, length = 20)
   private String senderType; // 발신 주체 (USER, AI)
 
-  @Column(name = "sender_id")
-  private Long senderId; // 발신 유저 ID (users.id 참조)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "sender_id")
+  private User sender; // 발신 유저 (users.id 참조, AI 발신이면 null)
 
   @Lob
   @Column(name = "message_text", nullable = false)

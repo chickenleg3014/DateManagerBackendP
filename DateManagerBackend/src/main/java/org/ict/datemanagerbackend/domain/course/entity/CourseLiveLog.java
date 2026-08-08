@@ -2,6 +2,7 @@ package org.ict.datemanagerbackend.domain.course.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.ict.datemanagerbackend.domain.user.entity.User;
 import java.time.LocalDateTime;
 
 @Entity
@@ -17,11 +18,13 @@ public class CourseLiveLog {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name = "course_group_id", nullable = false)
-  private Long courseGroupId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "course_group_id", nullable = false)
+  private CourseGroup courseGroup;
 
-  @Column(name = "user_id", nullable = false)
-  private Long userId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
   @Column(name = "switched_mood_mode", nullable = false)
   private String switchedMoodMode;

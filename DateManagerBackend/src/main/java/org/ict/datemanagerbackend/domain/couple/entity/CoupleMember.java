@@ -2,9 +2,12 @@ package org.ict.datemanagerbackend.domain.couple.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
@@ -13,6 +16,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.ict.datemanagerbackend.domain.user.entity.User;
 
 import java.time.LocalDateTime;
 
@@ -34,11 +38,13 @@ public class CoupleMember {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id; // 멤버십 ID (PK)
 
-  @Column(name = "couple_id", nullable = false)
-  private Long coupleId; // 커플 ID (couples.id 참조)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "couple_id", nullable = false)
+  private Couple couple; // 커플 (couples.id 참조)
 
-  @Column(name = "user_id", nullable = false)
-  private Long userId; // 유저 ID (users.id 참조)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user; // 유저 (users.id 참조)
 
   @Column(name = "role_type", length = 20)
   private String roleType; // 권한 타입 (OWNER, PARTNER 등)

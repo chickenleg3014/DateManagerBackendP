@@ -2,6 +2,7 @@ package org.ict.datemanagerbackend.domain.course.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.ict.datemanagerbackend.domain.place.entity.Place;
 
 @Entity
 @Table(name = "course_items", uniqueConstraints = {
@@ -18,11 +19,13 @@ public class CourseItem {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name = "course_group_id", nullable = false)
-  private Long courseGroupId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "course_group_id", nullable = false)
+  private CourseGroup courseGroup;
 
-  @Column(name = "place_id", nullable = false)
-  private Long placeId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "place_id", nullable = false)
+  private Place place;
 
   @Column(name = "sequence", nullable = false)
   private Integer sequence;
