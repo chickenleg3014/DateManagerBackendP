@@ -25,3 +25,7 @@ replay_pid*
 
 # 비밀 환경 변수 파일 제외
 .env
+
+# IntelliJ IDEA (저장소 최상위에 .idea가 생성되는 경우를 위한 규칙)
+.idea/
+*.iml
