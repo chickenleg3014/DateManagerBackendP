@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +17,12 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "places")
+@Table(
+    name = "places",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uq_places_external", columnNames = {"external_source", "external_id"})
+    }
+)
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -48,5 +54,11 @@ public class Place {
 
   @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
   private LocalDateTime createdAt; // 생성 일시
+
+  @Column(name = "external_source", length = 30)
+  private String externalSource; // 데이터 출처 (KOPIS 등 외부 연동 API 식별자)
+
+  @Column(name = "external_id", length = 50)
+  private String externalId; // 출처 쪽 고유 ID (예: KOPIS mt20id) - 동기화 시 중복 삽입 방지용
 
 }

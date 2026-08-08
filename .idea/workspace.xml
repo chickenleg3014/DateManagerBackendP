@@ -5,13 +5,40 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f22a8bca-b98c-40f6-b5a8-9d4a8ec2f9dd" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/modules/org.ict.DateManagerBackend.main.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/aichat/controller/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/aichat/dto/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/aichat/repository/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/aichat/service/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/calendar/controller/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/calendar/dto/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/calendar/repository/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/calendar/service/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/couple/controller/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/couple/dto/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/couple/repository/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/couple/service/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/course/controller/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/course/dto/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/course/repository/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/course/service/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/place/controller/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/place/dto/KopisPerformanceDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/place/repository/PlaceRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/place/service/PlaceSyncService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/user/dto/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/user/service/.gitkeep" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/DateManagerBackend.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules/org.ict.DateManagerBackend.main.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/DateManagerBackendApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/DateManagerBackendApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/place/entity/Place.java" beforeDir="false" afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/java/org/ict/datemanagerbackend/domain/place/entity/Place.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DateManagerBackend/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/DateManagerBackend/src/main/resources/application.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -145,13 +172,14 @@
     "RequestMappingsPanelWidth1": "75",
     "RunOnceActivity.MCP Project settings loaded": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "Spring Boot.DateManagerBackendApplication.executor": "Run",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "feature/oauth-login",
+    "git-widget-placeholder": "Merging feature/oauth-login",
     "ignore.virus.scanning.warn.message": "true",
     "junie.onboarding.icon.badge.shown": "true",
     "kotlin-language-version-configured": "true",
