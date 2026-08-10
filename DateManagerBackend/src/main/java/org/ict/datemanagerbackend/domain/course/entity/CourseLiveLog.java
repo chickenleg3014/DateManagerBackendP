@@ -5,12 +5,12 @@ import lombok.*;
 import org.ict.datemanagerbackend.domain.user.entity.User;
 import java.time.LocalDateTime;
 
+// 클릭 시점 스냅샷 로그라 생성 이후 값이 바뀌지 않아 setter가 없다.
 @Entity
 @Table(name = "course_live_logs")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
 @Builder
 public class CourseLiveLog {
 

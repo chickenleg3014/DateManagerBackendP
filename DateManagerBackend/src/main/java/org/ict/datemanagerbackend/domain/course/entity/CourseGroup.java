@@ -20,12 +20,12 @@ import org.ict.datemanagerbackend.domain.user.entity.User;
 
 import java.time.LocalDateTime;
 
+// title만 생성 이후 이름 변경이 가능해 setter를 열어둔다. couple/creator는 소속 관계라 불변.
 @Entity
 @Table(name = "course_groups")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
 @Builder
 public class CourseGroup {
 
@@ -41,6 +41,7 @@ public class CourseGroup {
   @JoinColumn(name = "creator_user_id", nullable = false)
   private User creator; // 생성 유저 (users.id 참조)
 
+  @Setter
   @Column(name = "title", nullable = false, length = 100)
   private String title; // 코스 타이틀
 

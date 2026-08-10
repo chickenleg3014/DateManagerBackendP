@@ -15,8 +15,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
+// 태그 자체가 바뀌는 경우는 없고(바꾸려면 삭제 후 재추가) 생성 이후 불변이라 setter가 없다.
 @Entity
 @Table(
     name = "place_amenities",
@@ -25,9 +25,8 @@ import lombok.Setter;
     }
 )
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
 @Builder
 public class PlaceAmenity {
 

@@ -16,6 +16,8 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+// name/category/address/latitude/longitude/imageUrl은 외부 API(KOPIS 등) 재동기화 시 갱신될 수 있어
+// 개별 setter를 열어둔다. externalSource/externalId는 동기화 식별 키라 생성 이후 바뀌지 않는다.
 @Entity
 @Table(
     name = "places",
@@ -24,9 +26,8 @@ import java.time.LocalDateTime;
     }
 )
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
 @Builder
 public class Place {
 
@@ -34,21 +35,27 @@ public class Place {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id; // 장소 ID (PK)
 
+  @Setter
   @Column(name = "name", nullable = false, length = 100)
   private String name; // 장소명
 
+  @Setter
   @Column(name = "category", length = 50)
   private String category; // 카테고리 (카페, 맛집 등)
 
+  @Setter
   @Column(name = "address", length = 255)
   private String address; // 도로명 주소
 
+  @Setter
   @Column(name = "latitude")
   private Double latitude; // 위도
 
+  @Setter
   @Column(name = "longitude")
   private Double longitude; // 경도
 
+  @Setter
   @Column(name = "image_url", length = 500)
   private String imageUrl; // 썸네일 URL
 

@@ -3,6 +3,7 @@ package org.ict.datemanagerbackend.domain.aichat.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+// 메시지 분석 시점에 한 번 계산되는 값이라 생성 이후 바뀌지 않아 setter가 없다.
 @Entity
 @Table(
     name = "ai_chat_message_scores",
@@ -11,9 +12,8 @@ import lombok.*;
     }
 )
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
 @Builder
 public class AiChatMessageScore {
 

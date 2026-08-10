@@ -5,12 +5,12 @@ import lombok.*;
 import org.ict.datemanagerbackend.domain.place.entity.Place;
 import java.time.LocalDateTime;
 
+// 재라우팅 발생 시점의 스냅샷 기록이라 생성 이후 값이 바뀌지 않아 setter가 없다.
 @Entity
 @Table(name = "course_re_routings")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
 @Builder
 public class CourseReRouting {
 
