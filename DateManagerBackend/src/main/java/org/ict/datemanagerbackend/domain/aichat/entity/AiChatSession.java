@@ -36,8 +36,8 @@ public class AiChatSession {
   @Column(name = "is_private", nullable = false, insertable = false, updatable = false)
   private Integer isPrivate; // 비밀 비서 플래그 (0/1 - DB 기본값 활용)
 
-  @Column(name = "is_active", nullable = false, insertable = false, updatable = false)
-  private Integer isActive; // 활성화 여부 (0/1 - DB 기본값 활용)
+  @Column(name = "is_active", nullable = false, insertable = false)
+  private Integer isActive; // 활성화 여부 (0/1, 생성 시 DB 기본값 1, 세션 종료 시 앱이 0으로 갱신)
 
   @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
   private LocalDateTime createdAt; // 생성 일시

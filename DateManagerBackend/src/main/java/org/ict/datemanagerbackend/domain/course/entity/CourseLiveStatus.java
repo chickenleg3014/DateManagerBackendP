@@ -18,8 +18,8 @@ public class CourseLiveStatus {
   @JoinColumn(name = "course_group_id")
   private CourseGroup courseGroup; // 코스 그룹과 PK를 공유하는 1:1 관계
 
-  @Column(name = "is_live_active", nullable = false, insertable = false, updatable = false)
-  private Integer isLiveActive;
+  @Column(name = "is_live_active", nullable = false, insertable = false)
+  private Integer isLiveActive; // 생성 시 DB 기본값 0, 이후 라이브 모드 시작/종료 로직이 갱신
 
   @Column(name = "current_mood_mode", nullable = false)
   private String currentMoodMode;

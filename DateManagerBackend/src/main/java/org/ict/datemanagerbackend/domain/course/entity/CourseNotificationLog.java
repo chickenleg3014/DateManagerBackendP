@@ -28,8 +28,8 @@ public class CourseNotificationLog {
   @Column(name = "message_text")
   private String messageText;
 
-  @Column(name = "is_clicked", nullable = false, insertable = false, updatable = false)
-  private Integer isClicked;
+  @Column(name = "is_clicked", nullable = false, insertable = false)
+  private Integer isClicked; // 생성 시 DB 기본값 0, 클릭 시 앱이 1로 갱신
 
   @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
   private LocalDateTime createdAt;

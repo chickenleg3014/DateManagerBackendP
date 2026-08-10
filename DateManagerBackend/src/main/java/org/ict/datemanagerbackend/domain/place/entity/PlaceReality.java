@@ -30,14 +30,14 @@ public class PlaceReality {
   @JoinColumn(name = "place_id")
   private Place place; // 장소와 PK를 공유하는 1:1 관계
 
-  @Column(name = "waiting_status", nullable = false, insertable = false, updatable = false)
-  private String waitingStatus; // 웨이팅 상태 (NONE, WAITING 등 - DB 기본값 활용)
+  @Column(name = "waiting_status", nullable = false, insertable = false)
+  private String waitingStatus; // 웨이팅 상태 (생성 시 DB 기본값 'NONE', 이후 실시간 동기화 로직이 갱신)
 
-  @Column(name = "waiting_teams", nullable = false, insertable = false, updatable = false)
-  private Integer waitingTeams; // 현재 대기 팀 수 (DB 기본값 활용)
+  @Column(name = "waiting_teams", nullable = false, insertable = false)
+  private Integer waitingTeams; // 현재 대기 팀 수 (생성 시 DB 기본값 0, 이후 실시간 동기화 로직이 갱신)
 
-  @Column(name = "reservation_type", nullable = false, insertable = false, updatable = false)
-  private String reservationType; // 예약 방식 (REQUIRED, WALKIN 등 - DB 기본값 활용)
+  @Column(name = "reservation_type", nullable = false, insertable = false)
+  private String reservationType; // 예약 방식 (생성 시 DB 기본값 'WALKIN', 이후 실시간 동기화 로직이 갱신)
 
   @Column(name = "price_text", length = 50)
   private String priceText; // 가격대 안내 태그

@@ -34,8 +34,8 @@ public class CoupleAnniversary {
   @Column(name = "anniversary_date", nullable = false)
   private LocalDate anniversaryDate; // 기념일 날짜
 
-  @Column(name = "alarm_type", insertable = false, updatable = false, length = 30)
-  private String alarmType; // 알림 방식 (DB 기본값 'D_DAY' 활용)
+  @Column(name = "alarm_type", insertable = false, length = 30)
+  private String alarmType; // 알림 방식 (생성 시 DB 기본값 'D_DAY', 이후 사용자가 변경 가능)
 
   @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
   private LocalDateTime createdAt; // 생성 일시
