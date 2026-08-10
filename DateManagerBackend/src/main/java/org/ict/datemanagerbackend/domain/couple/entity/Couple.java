@@ -11,11 +11,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-// status/connectedAt 모두 DB 기본값이 채우는 값(insertable/updatable=false)이라 setter가 없다.
-// status를 앱에서 직접 바꿔야 한다면(예: 연결 해제) insertable/updatable 제약부터 별도로 풀어야 한다.
+// connectedAt은 DB 기본값이 채우는 값이라 setter가 없다.
+// status는 생성 시엔 DB 기본값(ACTIVE)을 그대로 쓰지만(insertable=false 유지),
+// 관리자가 강제로 연결 해제(DISCONNECTED)할 수 있어야 해서 updatable만 풀어 setter를 열어둔다.
 @Entity
 @Table(name = "couples")
 @Getter
@@ -28,8 +30,9 @@ public class Couple {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id; // 커플 그룹 ID (PK)
 
-  @Column(nullable = false, insertable = false, updatable = false)
-  private String status; // 커플 상태 (ACTIVE, DISCONNECTED - DB 기본값 활용)
+  @Setter
+  @Column(nullable = false, insertable = false)
+  private String status; // 커플 상태 (ACTIVE, DISCONNECTED - 생성 시엔 DB 기본값, 이후 관리자가 변경 가능)
 
   @Column(name = "connected_at", insertable = false, updatable = false)
   private LocalDateTime connectedAt; // 연동 일시
