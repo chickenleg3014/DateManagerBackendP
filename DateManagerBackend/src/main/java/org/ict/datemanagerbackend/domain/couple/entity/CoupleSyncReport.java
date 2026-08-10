@@ -1,0 +1,55 @@
+package org.ict.datemanagerbackend.domain.couple.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+// 영수증 콘셉트의 생성 시점 스냅샷이라 이후 값이 바뀌지 않아 setter가 없다.
+@Entity
+@Table(
+    name = "couple_sync_reports",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uq_couple_sync_reports_case", columnNames = {"case_number"})
+    }
+)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
+@Builder
+public class CoupleSyncReport {
+
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id; // 리포트 ID (PK)
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "couple_id", nullable = false)
+  private Couple couple; // 커플 (couples.id 참조)
+
+  @Column(name = "case_number", nullable = false, length = 50)
+  private String caseNumber; // 영수증 콘셉트 고유 난수 코드
+
+  @Column(name = "balancing_score")
+  private Integer balancingScore; // 밸런싱 반영 점수
+
+  @Column(name = "conflict_probability_text", length = 100)
+  private String conflictProbabilityText; // 예상 갈등 요인 및 분석 텍스트
+
+  @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+  private LocalDateTime createdAt; // 생성 일시
+
+}
