@@ -20,6 +20,7 @@ import org.ict.datemanagerbackend.domain.user.entity.User;
 
 import java.time.LocalDateTime;
 
+// roleType(역할 위임)과 leftAt(탈퇴 처리)만 생성 이후 바뀔 수 있어 개별 setter를 열어둔다.
 @Entity
 @Table(
     name = "couple_members",
@@ -28,9 +29,8 @@ import java.time.LocalDateTime;
     }
 )
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
 @Builder
 public class CoupleMember {
 
@@ -46,12 +46,14 @@ public class CoupleMember {
   @JoinColumn(name = "user_id", nullable = false)
   private User user; // 유저 (users.id 참조)
 
+  @Setter
   @Column(name = "role_type", length = 20)
   private String roleType; // 권한 타입 (OWNER, PARTNER 등)
 
   @Column(name = "joined_at", insertable = false, updatable = false)
   private LocalDateTime joinedAt; // 참여 일시
 
+  @Setter
   @Column(name = "left_at")
   private LocalDateTime leftAt; // 이탈 일시
 

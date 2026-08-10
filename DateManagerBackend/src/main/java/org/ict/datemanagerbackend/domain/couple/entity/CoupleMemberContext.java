@@ -19,6 +19,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.ict.datemanagerbackend.domain.user.entity.User;
 
+// battery(체력 갱신)와 note(메모 수정)만 생성 이후 바뀔 수 있어 개별 setter를 열어둔다.
 @Entity
 @Table(
     name = "couple_member_contexts",
@@ -27,9 +28,8 @@ import org.ict.datemanagerbackend.domain.user.entity.User;
     }
 )
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
 @Builder
 public class CoupleMemberContext {
 
@@ -45,9 +45,11 @@ public class CoupleMemberContext {
   @JoinColumn(name = "user_id", nullable = false)
   private User user; // 유저 (users.id 참조)
 
+  @Setter
   @Column(name = "battery")
   private Integer battery; // 당일 체력 게이지 (0~100)
 
+  @Setter
   @Lob
   @Column(name = "note")
   private String note; // 특이사항 메모 (CLOB 매핑)

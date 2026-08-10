@@ -11,16 +11,16 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+// status/connectedAt 모두 DB 기본값이 채우는 값(insertable/updatable=false)이라 setter가 없다.
+// status를 앱에서 직접 바꿔야 한다면(예: 연결 해제) insertable/updatable 제약부터 별도로 풀어야 한다.
 @Entity
 @Table(name = "couples")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
 @Builder
 public class Couple {
 

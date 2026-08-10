@@ -15,10 +15,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+// 영수증 콘셉트의 생성 시점 스냅샷이라 이후 값이 바뀌지 않아 setter가 없다.
 @Entity
 @Table(
     name = "couple_sync_reports",
@@ -27,9 +27,8 @@ import java.time.LocalDateTime;
     }
 )
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
 @Builder
 public class CoupleSyncReport {
 

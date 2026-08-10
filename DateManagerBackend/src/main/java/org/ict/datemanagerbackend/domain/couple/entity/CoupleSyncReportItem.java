@@ -16,9 +16,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.ict.datemanagerbackend.domain.place.entity.Place;
 
+// 영수증 콘셉트 리포트의 하위 항목이라 생성 이후 값이 바뀌지 않아 setter가 없다.
 @Entity
 @Table(
     name = "couple_sync_report_items",
@@ -27,9 +27,8 @@ import org.ict.datemanagerbackend.domain.place.entity.Place;
     }
 )
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
 @Builder
 public class CoupleSyncReportItem {
 

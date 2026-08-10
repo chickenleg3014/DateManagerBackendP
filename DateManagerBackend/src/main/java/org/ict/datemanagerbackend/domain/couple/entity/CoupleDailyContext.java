@@ -20,6 +20,8 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+// weatherStatus/precipitationProbability(날씨 재동기화)와 budgetMaxPerPerson(예산 조정)만
+// 생성 이후 바뀔 수 있어 개별 setter를 열어둔다. isIndoorForced/budgetMinPerPerson은 DB 기본값 전용.
 @Entity
 @Table(
     name = "couple_daily_contexts",
@@ -28,9 +30,8 @@ import java.time.LocalDateTime;
     }
 )
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // Builder 전용, 외부에서 직접 호출 금지
 @Builder
 public class CoupleDailyContext {
 
@@ -45,9 +46,11 @@ public class CoupleDailyContext {
   @Column(name = "target_date", nullable = false)
   private LocalDate targetDate; // 데이트 예정일
 
+  @Setter
   @Column(name = "weather_status", length = 20)
   private String weatherStatus; // 날씨 요약 (맑음, 비 등)
 
+  @Setter
   @Column(name = "precipitation_probability")
   private Integer precipitationProbability; // 강수 확률 (0~100)
 
@@ -57,6 +60,7 @@ public class CoupleDailyContext {
   @Column(name = "budget_min_per_person", nullable = false, insertable = false, updatable = false)
   private Integer budgetMinPerPerson; // 최소 예산 (인당 - DB 기본값 활용)
 
+  @Setter
   @Column(name = "budget_max_per_person")
   private Integer budgetMaxPerPerson; // 최대 예산 (인당)
 
