@@ -2,6 +2,7 @@ package org.ict.datemanagerbackend.domain.place.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ict.datemanagerbackend.domain.place.dto.KopisFacilityDto;
 import org.ict.datemanagerbackend.domain.place.dto.KopisPerformanceDto;
 import org.ict.datemanagerbackend.domain.place.entity.Place;
 import org.ict.datemanagerbackend.domain.place.repository.PlaceRepository;
@@ -21,14 +22,17 @@ import java.io.StringReader;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
  * KOPIS(공연예술통합전산망) 공연 목록 API에서 데이터를 받아와 places 테이블에 채워 넣는 서비스.
  *
  * 원래 파이썬 스크립트(fetch_performance_data.py)로 하던 걸 그대로 백엔드 안으로 옮긴 것.
- * 흐름: [1] KOPIS에 HTTP 요청 → [2] XML 응답 받음 → [3] XML을 우리가 쓸 수 있는 객체로 파싱
+ * 흐름: [1] KOPIS 목록에 HTTP 요청 → [2] 공연별 상세조회로 공연시설 ID(mt10id) 확보
+ *      → [3] 시설 ID별로 상세조회를 한 번씩만 호출해 주소/위경도 확보(같은 시설은 캐시로 재사용)
  *      → [4] 이미 저장된 공연이면 갱신, 처음 보는 공연이면 새로 저장(upsert)
  */
 @Service
@@ -36,8 +40,11 @@ import java.util.Optional;
 @Slf4j // log.info(), log.error() 같은 로깅 기능을 롬복이 자동으로 만들어줌
 public class PlaceSyncService {
 
-  // KOPIS 공연목록 조회(pblprfr) API의 고정 주소
+  // KOPIS 공연목록/상세조회(pblprfr) API의 고정 주소 - 목록은 그대로, 상세는 뒤에 /{mt20id}를 붙여서 호출
   private static final String KOPIS_LIST_URL = "http://www.kopis.or.kr/openApi/restful/pblprfr";
+
+  // KOPIS 공연시설 상세조회 API - mt10id로 주소/위경도를 얻기 위해 사용
+  private static final String KOPIS_FACILITY_URL = "http://www.kopis.or.kr/openApi/restful/prfplc";
 
   // 우리 DB에서 "이 데이터가 KOPIS에서 왔다"는 걸 표시하기 위한 값 (Place.externalSource에 저장됨)
   private static final String EXTERNAL_SOURCE = "KOPIS";
@@ -59,6 +66,9 @@ public class PlaceSyncService {
   public void syncPerformances() {
     List<KopisPerformanceDto> performances = fetchPerformances();
 
+    // 같은 공연시설(mt10id)을 여러 공연이 공유하는 경우가 많아, 시설 상세조회는 한 번만 호출하고 캐시해서 재사용
+    Map<String, KopisFacilityDto> facilityCache = new HashMap<>();
+
     int created = 0;
     int updated = 0;
 
@@ -67,20 +77,34 @@ public class PlaceSyncService {
       Optional<Place> existing =
           placeRepository.findByExternalSourceAndExternalId(EXTERNAL_SOURCE, p.mt20id());
 
+      String mt10id = fetchMt10id(p.mt20id());
+      KopisFacilityDto facility = mt10id == null
+          ? null
+          : facilityCache.computeIfAbsent(mt10id, this::fetchFacility);
+
+      String address = facility != null ? facility.adres() : null;
+      Double lat = facility != null ? parseCoordinate(facility.la()) : null;
+      Double lng = facility != null ? parseCoordinate(facility.lo()) : null;
+
       if (existing.isPresent()) {
-        // 이미 있으면 새로 만들지 않고, 이름/카테고리/포스터만 최신 값으로 덮어씀 (update)
+        // 이미 있으면 새로 만들지 않고, 이름/카테고리/포스터/주소/위경도를 최신 값으로 덮어씀 (update)
         Place place = existing.get();
         place.setName(p.prfnm());
         place.setCategory(p.genrenm());
         place.setImageUrl(p.poster());
+        if (address != null) place.setAddress(address);
+        if (lat != null) place.setLatitude(lat);
+        if (lng != null) place.setLongitude(lng);
         placeRepository.save(place);
         updated++;
       } else {
         // 처음 보는 공연이면 새 Place 행을 만듦 (insert)
-        // 주소/위경도는 이 목록 API에는 안 들어있어서 일단 비워둠 (TODO: 아래 참고)
         Place place = Place.builder()
             .name(p.prfnm())
             .category(p.genrenm())
+            .address(address)
+            .latitude(lat)
+            .longitude(lng)
             .imageUrl(p.poster())
             .externalSource(EXTERNAL_SOURCE)
             .externalId(p.mt20id())
@@ -90,12 +114,8 @@ public class PlaceSyncService {
       }
     }
 
-    log.info("KOPIS 공연 동기화 완료 - 신규 {}건, 갱신 {}건 (전체 조회 {}건)",
-        created, updated, performances.size());
-
-    // TODO: 위도/경도, 주소는 KOPIS 공연시설 상세정보 API(prfplc)를 별도로 한 번 더 호출해야 얻을 수 있음.
-    //       위 목록 API 응답의 mt10id(공연시설 ID)로 상세 조회를 걸면 되는데,
-    //       상세 API의 정확한 응답 필드명은 KOPIS 공식 문서에서 직접 확인하고 채워 넣을 것.
+    log.info("KOPIS 공연 동기화 완료 - 신규 {}건, 갱신 {}건 (전체 조회 {}건, 시설 {}곳 조회)",
+        created, updated, performances.size(), facilityCache.size());
   }
 
   /** KOPIS API를 호출해서 앞으로 30일간의 공연 목록을 받아옴 */
@@ -119,47 +139,102 @@ public class PlaceSyncService {
     return parsePerformances(xml);
   }
 
+  /** 공연 상세조회(mt20id)를 호출해 그 공연이 열리는 시설의 ID(mt10id)를 얻어옴 */
+  private String fetchMt10id(String mt20id) {
+    String url = UriComponentsBuilder.fromUriString(KOPIS_LIST_URL + "/" + mt20id)
+        .queryParam("service", serviceKey)
+        .toUriString();
+
+    try {
+      String xml = restTemplate.getForObject(url, String.class);
+      Document doc = parseXml(xml);
+      if (doc == null) return null;
+
+      NodeList items = doc.getElementsByTagName("db");
+      if (items.getLength() == 0) return null;
+
+      return text((Element) items.item(0), "mt10id");
+    } catch (Exception e) {
+      log.error("KOPIS 공연 상세조회 실패 (mt20id={})", mt20id, e);
+      return null;
+    }
+  }
+
+  /** 공연시설 상세조회(mt10id)를 호출해 주소/위경도를 얻어옴 */
+  private KopisFacilityDto fetchFacility(String mt10id) {
+    String url = UriComponentsBuilder.fromUriString(KOPIS_FACILITY_URL + "/" + mt10id)
+        .queryParam("service", serviceKey)
+        .toUriString();
+
+    try {
+      String xml = restTemplate.getForObject(url, String.class);
+      Document doc = parseXml(xml);
+      if (doc == null) return null;
+
+      NodeList items = doc.getElementsByTagName("db");
+      if (items.getLength() == 0) return null;
+
+      Element el = (Element) items.item(0);
+      return new KopisFacilityDto(mt10id, text(el, "adres"), text(el, "la"), text(el, "lo"));
+    } catch (Exception e) {
+      log.error("KOPIS 공연시설 상세조회 실패 (mt10id={})", mt10id, e);
+      return null;
+    }
+  }
+
   /** KOPIS가 돌려준 XML 문자열을 파싱해서 우리가 쓰기 편한 객체 리스트로 바꿔줌 */
   private List<KopisPerformanceDto> parsePerformances(String xml) {
     List<KopisPerformanceDto> result = new ArrayList<>();
-    if (xml == null || xml.isBlank()) {
-      return result;
-    }
+    Document doc = parseXml(xml);
+    if (doc == null) return result;
 
-    try {
-      // 자바에 기본 내장된 XML 파서를 사용 (별도 라이브러리 추가 없이 사용 가능)
-      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-      // 외부 XML을 파싱할 때는 악성 XML(XXE 공격)을 막기 위해 DOCTYPE 선언을 금지시켜두는 게 안전함
-      factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+    // KOPIS 응답 구조: <dbs><db>...공연 1건...</db><db>...공연 2건...</db></dbs>
+    // "db" 태그 하나하나가 공연 1건에 해당함
+    NodeList items = doc.getElementsByTagName("db");
 
-      DocumentBuilder builder = factory.newDocumentBuilder();
-      Document doc = builder.parse(new InputSource(new StringReader(xml)));
-
-      // KOPIS 응답 구조: <dbs><db>...공연 1건...</db><db>...공연 2건...</db></dbs>
-      // "db" 태그 하나하나가 공연 1건에 해당함
-      NodeList items = doc.getElementsByTagName("db");
-
-      for (int i = 0; i < items.getLength(); i++) {
-        Element el = (Element) items.item(i);
-        result.add(new KopisPerformanceDto(
-            text(el, "mt20id"),
-            text(el, "prfnm"),
-            text(el, "fcltynm"),
-            text(el, "poster"),
-            text(el, "genrenm")
-        ));
-      }
-    } catch (Exception e) {
-      // 파싱이 실패해도 애플리케이션 전체가 죽으면 안 되니, 로그만 남기고 빈 리스트를 반환함
-      log.error("KOPIS 응답 파싱 실패", e);
+    for (int i = 0; i < items.getLength(); i++) {
+      Element el = (Element) items.item(i);
+      result.add(new KopisPerformanceDto(
+          text(el, "mt20id"),
+          text(el, "prfnm"),
+          text(el, "fcltynm"),
+          text(el, "poster"),
+          text(el, "genrenm")
+      ));
     }
 
     return result;
+  }
+
+  /** XML 문자열을 DOM Document로 파싱하는 공통 로직 (악성 XML 방지를 위해 DOCTYPE 선언 금지) */
+  private Document parseXml(String xml) {
+    if (xml == null || xml.isBlank()) {
+      return null;
+    }
+
+    try {
+      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+      factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+      DocumentBuilder builder = factory.newDocumentBuilder();
+      return builder.parse(new InputSource(new StringReader(xml)));
+    } catch (Exception e) {
+      log.error("KOPIS 응답 파싱 실패", e);
+      return null;
+    }
   }
 
   /** <db> 안에서 특정 태그(tag)의 텍스트 값만 꺼내는 헬퍼 메서드 */
   private String text(Element parent, String tag) {
     NodeList nl = parent.getElementsByTagName(tag);
     return nl.getLength() > 0 ? nl.item(0).getTextContent() : null;
+  }
+
+  private Double parseCoordinate(String value) {
+    if (value == null || value.isBlank()) return null;
+    try {
+      return Double.parseDouble(value.trim());
+    } catch (NumberFormatException e) {
+      return null;
+    }
   }
 }

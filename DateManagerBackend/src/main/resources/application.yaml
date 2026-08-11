@@ -108,3 +108,7 @@ kopis:
 #기상청 API 허브 인증키 - WeatherService에서 사용 (프론트엔드에는 노출하지 않음)
 kma:
   auth-key: ${KMA_AUTH_KEY}
+
+#한국관광공사 TourAPI(국문 관광정보서비스) 인증키 - TourApiSyncService에서 사용
+tourapi:
+  service-key: ${TOUR_API_SERVICE_KEY}
