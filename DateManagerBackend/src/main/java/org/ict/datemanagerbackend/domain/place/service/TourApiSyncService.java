@@ -107,45 +107,68 @@ public class TourApiSyncService {
     //       PlaceReality.priceText/parkingInfo를 채우는 로직을 추가할 것.
   }
 
-  /** contentTypeId 하나에 대해 지역기반 목록(최대 100건)을 받아옴 */
+  // TourAPI가 한 번에 내려주는 최대 건수(그 이상 요청하면 페이지가 잘림)
+  private static final int TOURAPI_PAGE_SIZE = 100;
+
+  // 무한 루프 방지용 안전장치. 카테고리당 최대 100 * 200 = 20000건까지 수집.
+  // (실측 결과 맛집 13,515건/관광지 12,644건/쇼핑 12,242건이 가장 많아 여유 있게 잡음 - 200페이지면 충분)
+  private static final int TOURAPI_MAX_PAGES = 200;
+
+  /**
+   * contentTypeId 하나에 대해 전국 목록을 전부 받아옴. areaBasedList2는 한 번에 최대 100건만
+   * 내려주기 때문에(numOfRows 상한), pageNo를 1씩 늘려가며 totalCount만큼 다 모을 때까지 반복 호출한다.
+   * (예전엔 pageNo=1 고정이라 카테고리당 최대 100건만 저장되고 나머지는 전부 유실되던 버그가 있었음 -
+   *  예: 맛집은 전국 13,515건인데 100건만 저장되고 있었음)
+   */
   private List<TourApiPlaceDto> fetchPlaces(String contentTypeId) {
-    String url = UriComponentsBuilder.fromUriString(LIST_URL)
-        .queryParam("serviceKey", serviceKey)
-        .queryParam("MobileOS", "ETC")
-        .queryParam("MobileApp", "DateManager")
-        .queryParam("_type", "json")
-        .queryParam("numOfRows", 100)
-        .queryParam("pageNo", 1)
-        .queryParam("contentTypeId", contentTypeId)
-        .toUriString();
+    List<TourApiPlaceDto> all = new ArrayList<>();
 
-    try {
-      JsonNode root = restTemplate.getForObject(url, JsonNode.class);
-      if (root == null) return List.of();
+    for (int page = 1; page <= TOURAPI_MAX_PAGES; page++) {
+      String url = UriComponentsBuilder.fromUriString(LIST_URL)
+          .queryParam("serviceKey", serviceKey)
+          .queryParam("MobileOS", "ETC")
+          .queryParam("MobileApp", "DateManager")
+          .queryParam("_type", "json")
+          .queryParam("numOfRows", TOURAPI_PAGE_SIZE)
+          .queryParam("pageNo", page)
+          .queryParam("contentTypeId", contentTypeId)
+          .toUriString();
 
-      JsonNode items = root.path("response").path("body").path("items").path("item");
-      List<TourApiPlaceDto> result = new ArrayList<>();
-      for (JsonNode item : items) {
-        String contentId = item.path("contentid").asText("");
-        String title = item.path("title").asText("");
-        if (contentId.isBlank() || title.isBlank()) continue; // 필수 정보 없는 항목은 건너뜀
+      List<TourApiPlaceDto> pageItems;
+      try {
+        JsonNode root = restTemplate.getForObject(url, JsonNode.class);
+        if (root == null) break;
 
-        result.add(new TourApiPlaceDto(
-            contentId,
-            title,
-            item.path("addr1").asText(""),
-            item.path("addr2").asText(""),
-            item.path("mapx").asText(""),
-            item.path("mapy").asText(""),
-            item.path("firstimage").asText(""),
-            item.path("firstimage2").asText("")
-        ));
+        JsonNode items = root.path("response").path("body").path("items").path("item");
+        pageItems = new ArrayList<>();
+        for (JsonNode item : items) {
+          String contentId = item.path("contentid").asText("");
+          String title = item.path("title").asText("");
+          if (contentId.isBlank() || title.isBlank()) continue; // 필수 정보 없는 항목은 건너뜀
+
+          pageItems.add(new TourApiPlaceDto(
+              contentId,
+              title,
+              item.path("addr1").asText(""),
+              item.path("addr2").asText(""),
+              item.path("mapx").asText(""),
+              item.path("mapy").asText(""),
+              item.path("firstimage").asText(""),
+              item.path("firstimage2").asText("")
+          ));
+        }
+      } catch (Exception e) {
+        log.error("TourAPI 호출 실패 (contentTypeId={}, page={})", contentTypeId, page, e);
+        break;
       }
-      return result;
-    } catch (Exception e) {
-      log.error("TourAPI 호출 실패 (contentTypeId={})", contentTypeId, e);
-      return List.of();
+
+      if (pageItems.isEmpty()) break;
+      all.addAll(pageItems);
+
+      if (pageItems.size() < TOURAPI_PAGE_SIZE) break; // 마지막 페이지까지 다 읽음
     }
+
+    return all;
   }
 
   private Double parseCoordinate(String value) {
