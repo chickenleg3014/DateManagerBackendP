@@ -119,24 +119,48 @@ public class PlaceSyncService {
   }
 
   /** KOPIS API를 호출해서 앞으로 30일간의 공연 목록을 받아옴 */
+  // KOPIS가 한 번에 내려주는 최대 건수(그 이상 요청하면 "최대 조회수는 100건까지 가능합니다" 에러가 남)
+  private static final int KOPIS_PAGE_SIZE = 100;
+
+  // 무한 루프 방지용 안전장치. 페이지당 100건 * 30페이지 = 최대 3000건까지 수집 (평소 30일치가
+  // 600~700건 수준으로 확인되어 충분히 여유 있게 잡음)
+  private static final int KOPIS_MAX_PAGES = 30;
+
+  /**
+   * KOPIS는 한 번의 요청으로 최대 100건만 내려주기 때문에(rows 파라미터 상한), 앞으로 30일간의
+   * 공연이 100건을 넘으면 cpage(페이지 번호)를 1씩 늘려가며 여러 번 호출해서 전부 모아야 한다.
+   * "이번 페이지 응답이 정확히 100건"이면 다음 페이지에 더 남아있을 가능성이 있다는 뜻이고,
+   * 100건보다 적게(또는 0건) 오면 그게 마지막 페이지라는 뜻이라 그때 반복을 멈춘다.
+   */
   private List<KopisPerformanceDto> fetchPerformances() {
     LocalDate today = LocalDate.now();
     // KOPIS는 날짜를 "yyyyMMdd" 형식 문자열로 받음 (예: 20260801)
     String stdate = today.format(DateTimeFormatter.BASIC_ISO_DATE);
     String eddate = today.plusDays(30).format(DateTimeFormatter.BASIC_ISO_DATE);
 
-    // UriComponentsBuilder: URL에 ?key=value&key2=value2... 를 안전하게(URL 인코딩 포함) 붙여주는 도구
-    String url = UriComponentsBuilder.fromUriString(KOPIS_LIST_URL)
-        .queryParam("service", serviceKey)
-        .queryParam("stdate", stdate)
-        .queryParam("eddate", eddate)
-        .queryParam("cpage", 1)   // 페이지 번호
-        .queryParam("rows", 100) // 한 번에 가져올 개수
-        .toUriString();
+    List<KopisPerformanceDto> all = new ArrayList<>();
 
-    // GET 요청을 보내고, 응답 body를 그대로 문자열(XML)로 받음
-    String xml = restTemplate.getForObject(url, String.class);
-    return parsePerformances(xml);
+    for (int page = 1; page <= KOPIS_MAX_PAGES; page++) {
+      // UriComponentsBuilder: URL에 ?key=value&key2=value2... 를 안전하게(URL 인코딩 포함) 붙여주는 도구
+      String url = UriComponentsBuilder.fromUriString(KOPIS_LIST_URL)
+          .queryParam("service", serviceKey)
+          .queryParam("stdate", stdate)
+          .queryParam("eddate", eddate)
+          .queryParam("cpage", page)
+          .queryParam("rows", KOPIS_PAGE_SIZE)
+          .toUriString();
+
+      // GET 요청을 보내고, 응답 body를 그대로 문자열(XML)로 받음
+      String xml = restTemplate.getForObject(url, String.class);
+      List<KopisPerformanceDto> pageItems = parsePerformances(xml);
+      all.addAll(pageItems);
+
+      if (pageItems.size() < KOPIS_PAGE_SIZE) {
+        break; // 마지막 페이지까지 다 읽음
+      }
+    }
+
+    return all;
   }
 
   /** 공연 상세조회(mt20id)를 호출해 그 공연이 열리는 시설의 ID(mt10id)를 얻어옴 */

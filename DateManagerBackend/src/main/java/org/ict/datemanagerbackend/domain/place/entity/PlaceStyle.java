@@ -17,6 +17,10 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 // score_*/is_indoor/is_activity는 큐레이션 로직이 생성 이후 계속 갱신하는 값이라 개별 setter를 열어둔다.
+// 주의: place_styles 테이블도 ddl-auto로만 생성돼 DB 레벨 DEFAULT가 없다(Place.createdAt과 같은 이유).
+// 예전엔 "생성 시 DB 기본값을 쓴다"고 insertable=false로 막아뒀지만 실제로는 DB에 채워줄 기본값이 없어
+// INSERT 시 NOT NULL 위반(ORA-01400)이 난다. 그래서 애플리케이션이 초기값을 직접 채우도록
+// @Builder.Default로 바꿨다 - 큐레이션 로직이 아직 없을 때 쓸 "중립값"들이다.
 @Entity
 @Table(name = "place_styles")
 @Getter
@@ -31,34 +35,42 @@ public class PlaceStyle {
   private Place place; // 장소와 PK를 공유하는 1:1 관계
 
   @Setter
-  @Column(name = "score_energy", nullable = false, insertable = false)
-  private Integer scoreEnergy; // 에너지 성향 점수 (생성 시 DB 기본값 50, 이후 큐레이션 로직이 갱신)
+  @Builder.Default
+  @Column(name = "score_energy", nullable = false)
+  private Integer scoreEnergy = 50; // 에너지 성향 점수 (생성 시 중립값 50, 이후 큐레이션 로직이 갱신)
 
   @Setter
-  @Column(name = "score_immersion", nullable = false, insertable = false)
-  private Integer scoreImmersion; // 몰입 성향 점수 (생성 시 DB 기본값 50, 이후 큐레이션 로직이 갱신)
+  @Builder.Default
+  @Column(name = "score_immersion", nullable = false)
+  private Integer scoreImmersion = 50; // 몰입 성향 점수 (생성 시 중립값 50, 이후 큐레이션 로직이 갱신)
 
   @Setter
-  @Column(name = "score_vibe", nullable = false, insertable = false)
-  private Integer scoreVibe; // 분위기 성향 점수 (생성 시 DB 기본값 50, 이후 큐레이션 로직이 갱신)
+  @Builder.Default
+  @Column(name = "score_vibe", nullable = false)
+  private Integer scoreVibe = 50; // 분위기 성향 점수 (생성 시 중립값 50, 이후 큐레이션 로직이 갱신)
 
   @Setter
-  @Column(name = "score_aesthetic", nullable = false, insertable = false)
-  private Integer scoreAesthetic; // 미감 성향 점수 (생성 시 DB 기본값 50, 이후 큐레이션 로직이 갱신)
+  @Builder.Default
+  @Column(name = "score_aesthetic", nullable = false)
+  private Integer scoreAesthetic = 50; // 미감 성향 점수 (생성 시 중립값 50, 이후 큐레이션 로직이 갱신)
 
   @Setter
-  @Column(name = "score_depth", nullable = false, insertable = false)
-  private Integer scoreDepth; // 깊이 성향 점수 (생성 시 DB 기본값 50, 이후 큐레이션 로직이 갱신)
+  @Builder.Default
+  @Column(name = "score_depth", nullable = false)
+  private Integer scoreDepth = 50; // 깊이 성향 점수 (생성 시 중립값 50, 이후 큐레이션 로직이 갱신)
 
   @Setter
-  @Column(name = "is_indoor", nullable = false, insertable = false)
-  private Integer isIndoor; // 실내 여부 (0/1, 생성 시 DB 기본값 1, 이후 큐레이션 로직이 갱신)
+  @Builder.Default
+  @Column(name = "is_indoor", nullable = false)
+  private Integer isIndoor = 1; // 실내 여부 (0/1, 생성 시 기본값 1, 이후 큐레이션 로직이 갱신)
 
   @Setter
-  @Column(name = "is_activity", nullable = false, insertable = false)
-  private Integer isActivity; // 액티비티 여부 (0/1, 생성 시 DB 기본값 0, 이후 큐레이션 로직이 갱신)
+  @Builder.Default
+  @Column(name = "is_activity", nullable = false)
+  private Integer isActivity = 0; // 액티비티 여부 (0/1, 생성 시 기본값 0, 이후 큐레이션 로직이 갱신)
 
-  @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
-  private LocalDateTime updatedAt; // 수정 일시
+  @Builder.Default
+  @Column(name = "updated_at", nullable = false, updatable = false)
+  private LocalDateTime updatedAt = LocalDateTime.now(); // 수정 일시
 
 }

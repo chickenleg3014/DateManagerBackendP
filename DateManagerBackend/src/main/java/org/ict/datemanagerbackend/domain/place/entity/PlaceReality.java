@@ -18,6 +18,9 @@ import java.time.LocalDateTime;
 
 // waitingStatus/waitingTeams/reservationType/priceText/parkingInfo는 실시간 동기화·정보 갱신으로
 // 계속 바뀌는 값이라 개별 setter를 열어둔다. place는 1:1 PK 공유라 불변.
+// 주의: place_realities 테이블도 ddl-auto로만 생성돼 DB 레벨 DEFAULT가 없다(Place.createdAt과 같은 이유).
+// insertable=false로 "DB 기본값을 쓴다"고 가정했던 필드들은 실제로 채워줄 기본값이 없어 INSERT 시
+// NOT NULL 위반(ORA-01400)이 난다. 애플리케이션이 초기값을 직접 채우도록 @Builder.Default로 바꿨다.
 @Entity
 @Table(name = "place_realities")
 @Getter
@@ -32,16 +35,19 @@ public class PlaceReality {
   private Place place; // 장소와 PK를 공유하는 1:1 관계
 
   @Setter
-  @Column(name = "waiting_status", nullable = false, insertable = false)
-  private String waitingStatus; // 웨이팅 상태 (생성 시 DB 기본값 'NONE', 이후 실시간 동기화 로직이 갱신)
+  @Builder.Default
+  @Column(name = "waiting_status", nullable = false)
+  private String waitingStatus = "NONE"; // 웨이팅 상태 (생성 시 기본값 'NONE', 이후 실시간 동기화 로직이 갱신)
 
   @Setter
-  @Column(name = "waiting_teams", nullable = false, insertable = false)
-  private Integer waitingTeams; // 현재 대기 팀 수 (생성 시 DB 기본값 0, 이후 실시간 동기화 로직이 갱신)
+  @Builder.Default
+  @Column(name = "waiting_teams", nullable = false)
+  private Integer waitingTeams = 0; // 현재 대기 팀 수 (생성 시 기본값 0, 이후 실시간 동기화 로직이 갱신)
 
   @Setter
-  @Column(name = "reservation_type", nullable = false, insertable = false)
-  private String reservationType; // 예약 방식 (생성 시 DB 기본값 'WALKIN', 이후 실시간 동기화 로직이 갱신)
+  @Builder.Default
+  @Column(name = "reservation_type", nullable = false)
+  private String reservationType = "WALKIN"; // 예약 방식 (생성 시 기본값 'WALKIN', 이후 실시간 동기화 로직이 갱신)
 
   @Setter
   @Column(name = "price_text", length = 50)
@@ -51,7 +57,8 @@ public class PlaceReality {
   @Column(name = "parking_info", length = 100)
   private String parkingInfo; // 주차 정보
 
-  @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
-  private LocalDateTime updatedAt; // 수정 일시
+  @Builder.Default
+  @Column(name = "updated_at", nullable = false, updatable = false)
+  private LocalDateTime updatedAt = LocalDateTime.now(); // 수정 일시
 
 }

@@ -59,8 +59,14 @@ public class Place {
   @Column(name = "image_url", length = 500)
   private String imageUrl; // 썸네일 URL
 
-  @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
-  private LocalDateTime createdAt; // 생성 일시
+  // 주의: places 테이블은 DB 레벨 DEFAULT(SYSTIMESTAMP)가 없다(수동 DDL을 안 쓰고 JPA ddl-auto로만
+  // 생성된 테이블이라 Hibernate가 컬럼 기본값까지는 자동으로 만들어주지 않음). 그래서 다른 도메인의
+  // insertable=false 패턴과 달리, 여기는 애플리케이션(자바)이 직접 값을 채워야 한다.
+  // @Builder.Default: 빌더로 객체를 만들 때 이 필드를 명시적으로 안 채우면 자동으로 LocalDateTime.now()가
+  // 들어가도록 함 - 그래서 각 동기화 서비스(PlaceSyncService 등)가 매번 createdAt을 신경 안 써도 됨.
+  @Builder.Default
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private LocalDateTime createdAt = LocalDateTime.now(); // 생성 일시
 
   @Column(name = "external_source", length = 30)
   private String externalSource; // 데이터 출처 (KOPIS 등 외부 연동 API 식별자)

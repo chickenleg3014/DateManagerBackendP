@@ -25,11 +25,13 @@ import java.time.LocalDateTime;
  * <p>인스턴스 생성 경로는 {@code org.ict.datemanagerbackend.domain.couple.controller.CoupleController}의
  * acceptInvite() 하나뿐이다 — 즉 초대 링크가 수락되는 순간에만 새 Couple이 만들어진다.
  */
-// connectedAt은 DB 기본값(SYSTIMESTAMP)이 채우는 값이라 자바 코드에서 직접 넣을 수 없어(insertable=false,
-// updatable=false) setter가 없다.
-// status는 생성 시엔 DB 기본값(ACTIVE)을 그대로 쓰지만(그래서 insertable=false는 유지),
-// 관리자가 강제로 연결 해제(DISCONNECTED)하거나 사용자가 직접 연결을 끊을 수 있어야 해서
-// updatable은 막지 않고 setter를 열어둔다 — "처음 만들 때는 내가 못 정하지만, 나중엔 바꿀 수 있다"는 뜻.
+// 주의: couples 테이블은 수동 DDL이 아니라 JPA ddl-auto로만 생성된 테이블이라 DB 레벨 DEFAULT가 없다
+// (Place.java의 createdAt과 동일한 이유). 그래서 예전 주석에 적혀있던 "DB 기본값을 그대로 쓴다"는
+// 전제가 틀렸었다 - status/connectedAt 모두 insertable=false로 두면 INSERT 문에서 컬럼 자체가 빠지는데
+// DB에 채워줄 기본값이 없으니 NOT NULL 제약(status)에 걸려 ORA-01400이 난다. 그래서 두 필드 다
+// @Builder.Default로 애플리케이션이 직접 값을 채우도록 바꿨다.
+// status는 생성 이후 관리자가 강제로 연결 해제(DISCONNECTED)하거나 사용자가 직접 연결을 끊을 수 있어야 해서
+// setter를 열어둔다 - "처음 만들 땐 ACTIVE로 고정, 나중엔 바꿀 수 있다"는 뜻.
 @Entity
 @Table(name = "couples")
 @Getter
@@ -43,10 +45,12 @@ public class Couple {
   private Long id; // 커플 그룹 ID (PK)
 
   @Setter
-  @Column(nullable = false, insertable = false)
-  private String status; // 커플 상태 (ACTIVE, DISCONNECTED - 생성 시엔 DB 기본값, 이후 setStatus()로 변경 가능)
+  @Builder.Default
+  @Column(nullable = false)
+  private String status = "ACTIVE"; // 커플 상태 (ACTIVE, DISCONNECTED - 생성 시 ACTIVE로 시작, 이후 setStatus()로 변경 가능)
 
-  @Column(name = "connected_at", insertable = false, updatable = false)
-  private LocalDateTime connectedAt; // 연동(커플 성사) 일시 - DB가 SYSTIMESTAMP로 자동 기록
+  @Builder.Default
+  @Column(name = "connected_at", updatable = false)
+  private LocalDateTime connectedAt = LocalDateTime.now(); // 연동(커플 성사) 일시 - Couple이 만들어지는 순간의 시각
 
 }
