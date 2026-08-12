@@ -1,7 +1,9 @@
 package org.ict.datemanagerbackend.auth;
 
 import org.ict.datemanagerbackend.config.JwtService;
+import org.ict.datemanagerbackend.domain.user.entity.LoginLog;
 import org.ict.datemanagerbackend.domain.user.entity.SocialAccount;
+import org.ict.datemanagerbackend.domain.user.repository.LoginLogRepository;
 import org.ict.datemanagerbackend.domain.user.repository.SocialAccountRepository;
 import org.ict.datemanagerbackend.domain.user.entity.User;
 import org.ict.datemanagerbackend.domain.user.repository.UserRepository;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 // 구글/카카오 로그인이 "성공"했을 때(=OAuth2 제공자가 사용자 인증을 마쳤을 때) 스프링 시큐리티가
@@ -34,6 +37,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final SocialAccountRepository socialAccountRepository;
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final JwtService jwtService;
+    private final LoginLogRepository loginLogRepository;
 
     @Value("${app.frontend-base-url}")
     private String frontendBaseUrl;
@@ -41,11 +45,13 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     public OAuth2LoginSuccessHandler(UserRepository userRepository,
                                       SocialAccountRepository socialAccountRepository,
                                       OAuth2AuthorizedClientService authorizedClientService,
-                                      JwtService jwtService) {
+                                      JwtService jwtService,
+                                      LoginLogRepository loginLogRepository) {
         this.userRepository = userRepository;
         this.socialAccountRepository = socialAccountRepository;
         this.authorizedClientService = authorizedClientService;
         this.jwtService = jwtService;
+        this.loginLogRepository = loginLogRepository;
     }
 
     @Override
@@ -108,6 +114,12 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             // 이전에 이 소셜 계정으로 로그인한 적이 있음 -> social_accounts에 연결된 user를 그대로 사용
             user = userRepository.findById(existingLink.get().getUser().getId())
                     .orElseThrow(() -> new IllegalStateException("연동된 유저를 찾을 수 없습니다"));
+            if (user.getWithdrawnAt() != null) {
+                String redirectUrl = frontendBaseUrl + "/oauth/callback?error="
+                        + URLEncoder.encode("탈퇴 처리된 계정입니다", StandardCharsets.UTF_8);
+                response.sendRedirect(redirectUrl);
+                return;
+            }
         } else {
             java.util.Optional<User> existingByEmail = userRepository.findByEmail(email);
             if (existingByEmail.isPresent() && existingByEmail.get().getPasswordHash() != null) {
@@ -138,9 +150,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                     .build());
         }
 
-        // 여기까지 오면 user가 확정된 상태. 우리 서비스 전용 JWT를 만들어서
-        // 프론트엔드의 /oauth/callback 라우트로 쿼리스트링에 실어 리다이렉트한다.
+        // 여기까지 오면 user가 확정된 상태. 관리자 대시보드 방문자 추이 그래프용 로그인 기록을 남기고,
+        // 우리 서비스 전용 JWT를 만들어서 프론트엔드의 /oauth/callback 라우트로 쿼리스트링에 실어 리다이렉트한다.
         // (프론트는 이 token 쿼리파라미터를 읽어 localStorage에 저장 -> 이후 요청부터 Authorization 헤더로 사용)
+        loginLogRepository.save(LoginLog.builder().user(user).loggedInAt(LocalDateTime.now()).build());
         String jwt = jwtService.generateToken(user.getId(), user.getEmail());
         String redirectUrl = frontendBaseUrl + "/oauth/callback?token=" + URLEncoder.encode(jwt, StandardCharsets.UTF_8);
         response.sendRedirect(redirectUrl);

@@ -86,7 +86,7 @@ spring:
         secret-key: ${S3_SECRET_KEY} # AWS에서 발급받은 Secret Key
       region: ap-northeast-2 # 서울 리전 기준
       s3:
-        bucket:  # 생성한 S3 버킷 이름
+        bucket: datemanager-profile-images # 생성한 S3 버킷 이름
 
   #JWT 토큰 비밀키 및 만료시간 설정(키는 임의명)
   #-비밀 키(JSON WEB TOKEN 해쉬 및 서명 확인에 사용)

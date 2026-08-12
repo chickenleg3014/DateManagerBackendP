@@ -46,6 +46,10 @@ dependencies {
     /* 환경 변수 관리용 dotenv-java 라이브러리*/
     implementation 'io.github.cdimascio:dotenv-java:3.0.0'
 
+    /* 프로필 사진 업로드용 AWS S3 SDK */
+    implementation platform('software.amazon.awssdk:bom:2.29.52')
+    implementation 'software.amazon.awssdk:s3'
+
     runtimeOnly 'com.oracle.database.jdbc:ojdbc11'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
