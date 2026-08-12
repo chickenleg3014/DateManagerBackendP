@@ -38,19 +38,30 @@ public class Subscription {
   @Column(name = "plan_code", nullable = false)
   private String planCode; // 구독 플랜 코드 (FREE, PREMIUM_MONTHLY 등)
 
-  @Column(nullable = false, insertable = false, updatable = false)
-  private String status; // 구독 상태 (ACTIVE, CANCELED, EXPIRED - DB 기본값 활용)
+  // 주의: subscriptions 테이블도 ddl-auto로만 생성돼 DB 레벨 DEFAULT가 없다(User.createdAt과 동일한 이유).
+  // insertable=false로 DB 기본값에 의존했던 건 실제로는 항상 null/에러가 나는 버그였어서 @Builder.Default로 교체했다.
+  @Builder.Default
+  @Column(nullable = false)
+  private String status = "ACTIVE"; // 구독 상태 (ACTIVE, CANCELED, EXPIRED)
 
-  @Column(name = "started_at", insertable = false, updatable = false)
-  private LocalDateTime startedAt; // 구독 시작일
+  @Builder.Default
+  @Column(name = "started_at", nullable = false)
+  private LocalDateTime startedAt = LocalDateTime.now(); // 구독 시작일
 
   @Column(name = "expires_at")
   private LocalDateTime expiresAt; // 구독 만료일
 
   @Column(name = "payment_provider")
-  private String paymentProvider; // 결제 수단/제공자 (IAP, PG 등)
+  private String paymentProvider; // 결제 수단/제공자 (TOSS 등)
 
-  @Column(name = "created_at", insertable = false, updatable = false)
-  private LocalDateTime createdAt; // 생성 일시
+  @Column(name = "billing_key")
+  private String billingKey; // PG(토스페이먼츠)에서 발급받은 빌링키 - 카드 최초 등록 후 저장, 이후 정기결제에 사용
+
+  @Column(name = "customer_key")
+  private String customerKey; // 빌링키 발급 시 사용한 토스 customerKey - 결제 승인 요청 시 반드시 동일한 값을 써야 해서 같이 저장
+
+  @Builder.Default
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private LocalDateTime createdAt = LocalDateTime.now(); // 생성 일시
 
 }
