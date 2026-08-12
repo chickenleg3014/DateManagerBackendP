@@ -42,7 +42,7 @@ public class Subscription {
   // insertable=false로 DB 기본값에 의존했던 건 실제로는 항상 null/에러가 나는 버그였어서 @Builder.Default로 교체했다.
   @Builder.Default
   @Column(nullable = false)
-  private String status = "ACTIVE"; // 구독 상태 (ACTIVE, CANCELED, EXPIRED)
+  private String status = "ACTIVE"; // 구독 상태 (ACTIVE, PAST_DUE-결제실패, CANCELED)
 
   @Builder.Default
   @Column(name = "started_at", nullable = false)
@@ -59,6 +59,12 @@ public class Subscription {
 
   @Column(name = "customer_key")
   private String customerKey; // 빌링키 발급 시 사용한 토스 customerKey - 결제 승인 요청 시 반드시 동일한 값을 써야 해서 같이 저장
+
+  @Column(name = "last_payment_status")
+  private String lastPaymentStatus; // 가장 최근 결제 시도 결과 (SUCCESS, FAILED)
+
+  @Column(name = "last_payment_error", length = 500)
+  private String lastPaymentError; // 결제 실패 시 토스가 내려준 에러 메시지 (프론트에 그대로 표시)
 
   @Builder.Default
   @Column(name = "created_at", nullable = false, updatable = false)

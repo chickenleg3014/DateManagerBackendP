@@ -5,6 +5,7 @@ import org.ict.datemanagerbackend.domain.user.entity.Subscription;
 import org.ict.datemanagerbackend.domain.user.entity.User;
 import org.ict.datemanagerbackend.domain.user.repository.SubscriptionRepository;
 import org.ict.datemanagerbackend.domain.user.repository.UserRepository;
+import org.ict.datemanagerbackend.domain.user.service.SubscriptionService;
 import org.ict.datemanagerbackend.domain.user.service.TossPaymentsService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,12 +19,14 @@ import org.springframework.web.client.HttpStatusCodeException;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 // 구독(정기결제) API. 결제 흐름:
 //   1) 프론트가 토스페이먼츠 결제위젯으로 카드 등록 인증을 마치면 authKey+customerKey를 받는다
-//   2) POST /billing-key 로 그 값을 넘기면, 여기서 토스 API로 빌링키를 발급받아 Subscription에 저장한다
-//   3) 이후 POST /charge 로 저장된 빌링키를 이용해 실제 결제를 승인 요청한다 (카드 재인증 불필요)
+//   2) POST /billing-key 로 그 값을 넘기면, 여기서 토스 API로 빌링키를 발급받아 Subscription에 저장하고
+//      바로 첫 결제까지 진행한다 (가입 즉시 첫 달 요금 청구)
+//   3) 이후 매일 새벽 SubscriptionRenewalScheduler가 만료일 지난 구독을 자동으로 재결제한다
+//   4) 결제가 실패하면 status가 PAST_DUE로 바뀌는데, POST /charge로 수동 재시도할 수 있다
+//   5) POST /cancel 로 구독을 해지하면 이후 자동 갱신 대상에서 제외된다
 @RestController
 @RequestMapping("/api/subscriptions")
 public class SubscriptionController {
@@ -31,22 +34,22 @@ public class SubscriptionController {
     private final SubscriptionRepository subscriptionRepository;
     private final UserRepository userRepository;
     private final TossPaymentsService tossPaymentsService;
+    private final SubscriptionService subscriptionService;
 
     public SubscriptionController(SubscriptionRepository subscriptionRepository, UserRepository userRepository,
-                                   TossPaymentsService tossPaymentsService) {
+                                   TossPaymentsService tossPaymentsService, SubscriptionService subscriptionService) {
         this.subscriptionRepository = subscriptionRepository;
         this.userRepository = userRepository;
         this.tossPaymentsService = tossPaymentsService;
+        this.subscriptionService = subscriptionService;
     }
 
     public record IssueBillingKeyRequest(String authKey, String customerKey, String planCode) {
     }
 
-    public record ChargeRequest(int amount, String orderName) {
-    }
-
     public record SubscriptionDto(Long id, String planCode, String status, LocalDateTime startedAt,
-                                   LocalDateTime expiresAt, String paymentProvider, boolean hasBillingKey) {
+                                   LocalDateTime expiresAt, String paymentProvider, boolean hasBillingKey,
+                                   String lastPaymentStatus, String lastPaymentError) {
     }
 
     @GetMapping("/me")
@@ -86,34 +89,44 @@ public class SubscriptionController {
                 .billingKey(billingKey)
                 .customerKey(req.customerKey())
                 .build();
-        subscriptionRepository.save(subscription);
+        subscription = subscriptionService.chargeAndUpdate(subscription); // 가입 즉시 첫 결제
         return ResponseEntity.ok(toDto(subscription));
     }
 
+    // PAST_DUE(결제 실패) 상태를 수동으로 재시도할 때 사용. 정상 구독 중엔 자동 갱신(스케줄러)만으로 충분하다.
     @PostMapping("/charge")
-    public ResponseEntity<?> charge(Authentication authentication, @RequestBody ChargeRequest req) {
+    public ResponseEntity<?> retryCharge(Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
         Subscription subscription = subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(userId).orElse(null);
         if (subscription == null || subscription.getBillingKey() == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "등록된 빌링키가 없습니다. 먼저 카드를 등록해주세요"));
         }
-        String orderId = UUID.randomUUID().toString();
-        JsonNode result;
-        try {
-            result = tossPaymentsService.charge(subscription.getBillingKey(),
-                    subscription.getCustomerKey(), req.amount(), orderId, req.orderName());
-        } catch (HttpStatusCodeException e) {
-            return ResponseEntity.status(402).body(Map.of("error", "결제 승인에 실패했습니다"));
+        if ("CANCELED".equals(subscription.getStatus())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "이미 해지된 구독입니다"));
         }
-        return ResponseEntity.ok(Map.of(
-                "orderId", orderId,
-                "status", result.path("status").asText(null),
-                "approvedAt", result.path("approvedAt").asText(null)
-        ));
+        subscription = subscriptionService.chargeAndUpdate(subscription);
+        return ResponseEntity.ok(toDto(subscription));
+    }
+
+    @PostMapping("/cancel")
+    public ResponseEntity<?> cancel(Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        Subscription subscription = subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(userId).orElse(null);
+        if (subscription == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "구독 내역이 없습니다"));
+        }
+        if ("CANCELED".equals(subscription.getStatus())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "이미 해지된 구독입니다"));
+        }
+        // 만료일(expiresAt)은 그대로 둔다 - 이미 낸 이용 기간까지는 유지되고, 그 이후 자동 갱신만 안 되는 방식
+        subscription.setStatus("CANCELED");
+        subscriptionRepository.save(subscription);
+        return ResponseEntity.ok(toDto(subscription));
     }
 
     private SubscriptionDto toDto(Subscription s) {
         return new SubscriptionDto(s.getId(), s.getPlanCode(), s.getStatus(), s.getStartedAt(),
-                s.getExpiresAt(), s.getPaymentProvider(), s.getBillingKey() != null);
+                s.getExpiresAt(), s.getPaymentProvider(), s.getBillingKey() != null,
+                s.getLastPaymentStatus(), s.getLastPaymentError());
     }
 }
