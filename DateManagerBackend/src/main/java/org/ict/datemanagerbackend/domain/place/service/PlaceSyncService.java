@@ -18,7 +18,6 @@ import org.xml.sax.InputSource;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.StringReader;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -139,8 +138,10 @@ public class PlaceSyncService {
   private List<KopisPerformanceDto> fetchPerformances() {
     LocalDate today = LocalDate.now();
     // KOPIS는 날짜를 "yyyyMMdd" 형식 문자열로 받음 (예: 20260801)
+    // 원래 30일이었는데(공연 수가 900건대로 적었음), 너무 멀리 있는 공연까지 보여주면 티켓 오픈 전이거나
+    // 일정이 바뀔 수 있다는 트레이드오프를 감안해 60일로만 늘림.
     String stdate = today.format(DateTimeFormatter.BASIC_ISO_DATE);
-    String eddate = today.plusDays(30).format(DateTimeFormatter.BASIC_ISO_DATE);
+    String eddate = today.plusDays(60).format(DateTimeFormatter.BASIC_ISO_DATE);
 
     List<KopisPerformanceDto> all = new ArrayList<>();
 
@@ -158,11 +159,15 @@ public class PlaceSyncService {
           .build(true)
           .toUriString();
 
-      // GET 요청을 보내고, 응답 body를 그대로 문자열(XML)로 받음
+      // GET 요청을 보내고, 응답 body를 바이트 그대로 받음.
       // getForObject(String, ...)는 이미 인코딩된 URL을 다시 인코딩해버리는(이중 인코딩) 문제가 있어
       // URI로 직접 넘긴다 (TourAPI에서 이 문제로 실제 인증 실패를 겪었음).
-      String xml = restTemplate.getForObject(java.net.URI.create(url), String.class);
-      List<KopisPerformanceDto> pageItems = parsePerformances(xml);
+      // String.class로 받지 않는 이유: KOPIS 응답의 Content-Type이 charset 없이 "application/xml"만
+      // 내려와서, RestTemplate이 한글을 엉뚱한 인코딩으로 디코딩해 깨트리는 문제가 있었다(실측 확인).
+      // XML 자체엔 <?xml ... encoding="UTF-8"?> 선언이 정확히 들어있으므로, 바이트를 그대로 XML
+      // 파서에 넘겨서 파서가 그 선언을 보고 알아서 정확히 디코딩하도록 한다.
+      byte[] xmlBytes = restTemplate.getForObject(java.net.URI.create(url), byte[].class);
+      List<KopisPerformanceDto> pageItems = parsePerformances(xmlBytes);
       all.addAll(pageItems);
 
       if (pageItems.size() < KOPIS_PAGE_SIZE) {
@@ -183,8 +188,9 @@ public class PlaceSyncService {
     try {
       // getForObject(String, ...)는 이미 인코딩된 URL을 다시 인코딩해버리는(이중 인코딩) 문제가 있어
       // URI로 직접 넘긴다 (TourAPI에서 이 문제로 실제 인증 실패를 겪었음).
-      String xml = restTemplate.getForObject(java.net.URI.create(url), String.class);
-      Document doc = parseXml(xml);
+      // byte[]로 받는 이유는 fetchPerformances의 주석 참고 (charset 없는 Content-Type 때문에 한글이 깨짐).
+      byte[] xmlBytes = restTemplate.getForObject(java.net.URI.create(url), byte[].class);
+      Document doc = parseXml(xmlBytes);
       if (doc == null) return null;
 
       NodeList items = doc.getElementsByTagName("db");
@@ -207,8 +213,9 @@ public class PlaceSyncService {
     try {
       // getForObject(String, ...)는 이미 인코딩된 URL을 다시 인코딩해버리는(이중 인코딩) 문제가 있어
       // URI로 직접 넘긴다 (TourAPI에서 이 문제로 실제 인증 실패를 겪었음).
-      String xml = restTemplate.getForObject(java.net.URI.create(url), String.class);
-      Document doc = parseXml(xml);
+      // byte[]로 받는 이유는 fetchPerformances의 주석 참고 (charset 없는 Content-Type 때문에 한글이 깨짐).
+      byte[] xmlBytes = restTemplate.getForObject(java.net.URI.create(url), byte[].class);
+      Document doc = parseXml(xmlBytes);
       if (doc == null) return null;
 
       NodeList items = doc.getElementsByTagName("db");
@@ -222,10 +229,10 @@ public class PlaceSyncService {
     }
   }
 
-  /** KOPIS가 돌려준 XML 문자열을 파싱해서 우리가 쓰기 편한 객체 리스트로 바꿔줌 */
-  private List<KopisPerformanceDto> parsePerformances(String xml) {
+  /** KOPIS가 돌려준 XML을 파싱해서 우리가 쓰기 편한 객체 리스트로 바꿔줌 */
+  private List<KopisPerformanceDto> parsePerformances(byte[] xmlBytes) {
     List<KopisPerformanceDto> result = new ArrayList<>();
-    Document doc = parseXml(xml);
+    Document doc = parseXml(xmlBytes);
     if (doc == null) return result;
 
     // KOPIS 응답 구조: <dbs><db>...공연 1건...</db><db>...공연 2건...</db></dbs>
@@ -246,9 +253,15 @@ public class PlaceSyncService {
     return result;
   }
 
-  /** XML 문자열을 DOM Document로 파싱하는 공통 로직 (악성 XML 방지를 위해 DOCTYPE 선언 금지) */
-  private Document parseXml(String xml) {
-    if (xml == null || xml.isBlank()) {
+  /**
+   * XML 바이트를 DOM Document로 파싱하는 공통 로직 (악성 XML 방지를 위해 DOCTYPE 선언 금지).
+   * 문자열이 아니라 바이트를 그대로 넘기는 이유: XML 파서는 바이트 스트림을 받으면 XML 선언의
+   * encoding 속성(KOPIS는 UTF-8로 정확히 선언함)을 보고 스스로 올바르게 디코딩한다. RestTemplate으로
+   * 미리 String으로 변환해서 넘기면, Content-Type에 charset이 없어 엉뚱한 인코딩으로 디코딩되어
+   * 한글이 깨지는 문제가 있었다(실측 확인 - genrenm/prfnm 등 한글 필드가 DB에 깨진 채 저장됨).
+   */
+  private Document parseXml(byte[] xmlBytes) {
+    if (xmlBytes == null || xmlBytes.length == 0) {
       return null;
     }
 
@@ -256,7 +269,7 @@ public class PlaceSyncService {
       DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
       factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
       DocumentBuilder builder = factory.newDocumentBuilder();
-      return builder.parse(new InputSource(new StringReader(xml)));
+      return builder.parse(new InputSource(new java.io.ByteArrayInputStream(xmlBytes)));
     } catch (Exception e) {
       log.error("KOPIS 응답 파싱 실패", e);
       return null;

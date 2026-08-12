@@ -45,13 +45,40 @@ public class NaverPlaceSyncService {
   // mapx/mapy는 WGS84 좌표에 10^7을 곱한 정수로 내려온다(실측 확인: 1270274938 -> 127.0274938).
   private static final double COORDINATE_SCALE = 1e7;
 
-  // 한 검색어당 최대 5건까지만 나와서(display 상한), 서울 25개 구 x 카테고리별 키워드 조합으로
-  // 최대한 다양한 검색어를 만들어 여러 번 호출한다.
-  private static final List<String> SEOUL_DISTRICTS = List.of(
-      "강남구", "강동구", "강북구", "강서구", "관악구", "광진구", "구로구", "금천구",
-      "노원구", "도봉구", "동대문구", "동작구", "마포구", "서대문구", "서초구", "성동구",
-      "성북구", "송파구", "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"
-  );
+  // 한 검색어당 최대 5건까지만 나와서(display 상한), 지역명 x 카테고리별 키워드 조합으로 최대한
+  // 다양한 검색어를 만들어 여러 번 호출한다. 액티비티/문화시설 수요가 수도권(서울/경기/인천)과
+  // 부산에 몰려있다는 판단에 따라 우선 이 지역들부터 커버하고, 부족하면 다른 광역시로 넓힌다.
+  //
+  // "서구"/"중구"/"남구"/"동구"처럼 같은 구 이름이 여러 도시에 겹치는 경우가 많아(인천 서구, 부산 서구,
+  // 광주 서구 등) 시/도 이름 없이 검색하면 엉뚱한 지역 결과가 섞일 수 있다. 그래서 각 지역명 앞에
+  // 시/도 이름을 붙여 질의어 자체를 명확하게 만든다(예: "인천 서구", "부산 서구").
+  private static final List<String> REGIONS = new ArrayList<>();
+
+  static {
+    for (String gu : List.of(
+        "강남구", "강동구", "강북구", "강서구", "관악구", "광진구", "구로구", "금천구",
+        "노원구", "도봉구", "동대문구", "동작구", "마포구", "서대문구", "서초구", "성동구",
+        "성북구", "송파구", "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"
+    )) {
+      REGIONS.add("서울 " + gu);
+    }
+    // 경기도 주요 시 (인구/상권 규모가 큰 곳 위주로 우선 선정)
+    for (String si : List.of(
+        "수원시", "성남시", "고양시", "용인시", "부천시",
+        "안산시", "안양시", "남양주시", "화성시", "평택시"
+    )) {
+      REGIONS.add("경기 " + si);
+    }
+    for (String gu : List.of("남동구", "부평구", "서구", "연수구", "미추홀구")) {
+      REGIONS.add("인천 " + gu);
+    }
+    for (String gu : List.of(
+        "해운대구", "부산진구", "동래구", "수영구", "사상구", "사하구", "남구", "서구",
+        "중구", "연제구", "금정구", "강서구", "동구", "북구", "영도구", "기장군"
+    )) {
+      REGIONS.add("부산 " + gu);
+    }
+  }
 
   // 액티비티/문화시설은 TourAPI/KOPIS 수집량이 상대적으로 적었던 카테고리라 보강 대상으로 선정함.
   private static final Map<String, List<String>> CATEGORY_KEYWORDS = new LinkedHashMap<>(Map.of(
@@ -88,8 +115,8 @@ public class NaverPlaceSyncService {
       String category = entry.getKey();
 
       for (String keyword : entry.getValue()) {
-        for (String district : SEOUL_DISTRICTS) {
-          String query = district + " " + keyword;
+        for (String region : REGIONS) {
+          String query = region + " " + keyword;
           List<NaverLocalPlaceDto> items;
           try {
             items = search(query);
