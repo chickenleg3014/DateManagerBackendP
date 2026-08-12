@@ -46,6 +46,10 @@ public class PlaceSyncService {
   // KOPIS 공연목록/상세조회(pblprfr) API의 고정 주소 - 목록은 그대로, 상세는 뒤에 /{mt20id}를 붙여서 호출
   private static final String KOPIS_LIST_URL = "http://www.kopis.or.kr/openApi/restful/pblprfr";
 
+  // KOPIS 축제목록(prffest) API - 요청 파라미터/응답 구조가 공연목록과 완전히 동일하고 festival=Y로
+  // 태그된 항목만 내려준다는 점만 다르다. 같은 서비스키로 별도 신청 없이 바로 호출 가능함(실측 확인).
+  private static final String KOPIS_FESTIVAL_URL = "http://kopis.or.kr/openApi/restful/prffest";
+
   // KOPIS 공연시설 상세조회 API - mt10id로 주소/위경도를 얻기 위해 사용
   private static final String KOPIS_FACILITY_URL = "http://www.kopis.or.kr/openApi/restful/prfplc";
 
@@ -67,8 +71,41 @@ public class PlaceSyncService {
    */
   @Scheduled(cron = "0 0 3 * * *")
   public void syncPerformances() {
-    List<KopisPerformanceDto> performances = fetchPerformances();
+    LocalDate today = LocalDate.now();
+    // 원래 30일이었는데(공연 수가 900건대로 적었음), 너무 멀리 있는 공연까지 보여주면 티켓 오픈 전이거나
+    // 일정이 바뀔 수 있다는 트레이드오프를 감안해 60일로만 늘림.
+    List<KopisPerformanceDto> performances = fetchFromKopis(KOPIS_LIST_URL, today, today.plusDays(60));
 
+    // 장르(genrenm)를 그대로 카테고리로 사용 - 뮤지컬/연극/국악 등
+    UpsertResult result = upsertAll(performances, KopisPerformanceDto::genrenm);
+
+    log.info("KOPIS 공연 동기화 완료 - 신규 {}건, 갱신 {}건 (전체 조회 {}건)",
+        result.created(), result.updated(), performances.size());
+  }
+
+  /**
+   * KOPIS 축제목록(prffest) 동기화 - 공연목록과 요청/응답 구조가 동일하지만 festival=Y로 태그된
+   * 항목만 내려준다. 장르 대신 "축제" 하나로 카테고리를 고정해서, 데이트 코스 추천 시 일반 공연과
+   * 구분해서 보여줄 수 있게 한다. 같은 mt20id를 syncPerformances가 이미 저장해뒀으면(장르 기준
+   * 카테고리로) 이 동기화가 나중에 실행되면서 "축제"로 덮어써 더 구체적인 정보로 갱신된다.
+   */
+  @Scheduled(cron = "0 30 3 * * *") // 공연 동기화(3시) 직후, 30분 뒤로 배치해 겹치지 않게 함
+  public void syncFestivals() {
+    LocalDate today = LocalDate.now();
+    List<KopisPerformanceDto> festivals = fetchFromKopis(KOPIS_FESTIVAL_URL, today, today.plusDays(60));
+
+    UpsertResult result = upsertAll(festivals, p -> "축제");
+
+    log.info("KOPIS 축제 동기화 완료 - 신규 {}건, 갱신 {}건 (전체 조회 {}건)",
+        result.created(), result.updated(), festivals.size());
+  }
+
+  private record UpsertResult(int created, int updated) {
+  }
+
+  /** 공연/축제 목록을 upsert하는 공통 로직. categoryFn으로 이 목록에 적용할 카테고리를 결정한다. */
+  private UpsertResult upsertAll(List<KopisPerformanceDto> performances,
+                                  java.util.function.Function<KopisPerformanceDto, String> categoryFn) {
     // 같은 공연시설(mt10id)을 여러 공연이 공유하는 경우가 많아, 시설 상세조회는 한 번만 호출하고 캐시해서 재사용
     Map<String, KopisFacilityDto> facilityCache = new HashMap<>();
 
@@ -88,12 +125,13 @@ public class PlaceSyncService {
       String address = facility != null ? facility.adres() : null;
       Double lat = facility != null ? parseCoordinate(facility.la()) : null;
       Double lng = facility != null ? parseCoordinate(facility.lo()) : null;
+      String category = categoryFn.apply(p);
 
       if (existing.isPresent()) {
         // 이미 있으면 새로 만들지 않고, 이름/카테고리/포스터/주소/위경도를 최신 값으로 덮어씀 (update)
         Place place = existing.get();
         place.setName(p.prfnm());
-        place.setCategory(p.genrenm());
+        place.setCategory(category);
         place.setImageUrl(p.poster());
         if (address != null) place.setAddress(address);
         if (lat != null) place.setLatitude(lat);
@@ -104,7 +142,7 @@ public class PlaceSyncService {
         // 처음 보는 공연이면 새 Place 행을 만듦 (insert)
         Place place = Place.builder()
             .name(p.prfnm())
-            .category(p.genrenm())
+            .category(category)
             .address(address)
             .latitude(lat)
             .longitude(lng)
@@ -117,8 +155,7 @@ public class PlaceSyncService {
       }
     }
 
-    log.info("KOPIS 공연 동기화 완료 - 신규 {}건, 갱신 {}건 (전체 조회 {}건, 시설 {}곳 조회)",
-        created, updated, performances.size(), facilityCache.size());
+    return new UpsertResult(created, updated);
   }
 
   /** KOPIS API를 호출해서 앞으로 30일간의 공연 목록을 받아옴 */
@@ -130,18 +167,18 @@ public class PlaceSyncService {
   private static final int KOPIS_MAX_PAGES = 30;
 
   /**
-   * KOPIS는 한 번의 요청으로 최대 100건만 내려주기 때문에(rows 파라미터 상한), 앞으로 30일간의
+   * KOPIS는 한 번의 요청으로 최대 100건만 내려주기 때문에(rows 파라미터 상한), 조회 기간의
    * 공연이 100건을 넘으면 cpage(페이지 번호)를 1씩 늘려가며 여러 번 호출해서 전부 모아야 한다.
    * "이번 페이지 응답이 정확히 100건"이면 다음 페이지에 더 남아있을 가능성이 있다는 뜻이고,
    * 100건보다 적게(또는 0건) 오면 그게 마지막 페이지라는 뜻이라 그때 반복을 멈춘다.
+   *
+   * baseUrl만 다르면 공연목록(pblprfr)/축제목록(prffest) 둘 다 요청/응답 구조가 완전히 같아서
+   * 이 메서드 하나로 공유해서 쓴다.
    */
-  private List<KopisPerformanceDto> fetchPerformances() {
-    LocalDate today = LocalDate.now();
+  private List<KopisPerformanceDto> fetchFromKopis(String baseUrl, LocalDate start, LocalDate end) {
     // KOPIS는 날짜를 "yyyyMMdd" 형식 문자열로 받음 (예: 20260801)
-    // 원래 30일이었는데(공연 수가 900건대로 적었음), 너무 멀리 있는 공연까지 보여주면 티켓 오픈 전이거나
-    // 일정이 바뀔 수 있다는 트레이드오프를 감안해 60일로만 늘림.
-    String stdate = today.format(DateTimeFormatter.BASIC_ISO_DATE);
-    String eddate = today.plusDays(60).format(DateTimeFormatter.BASIC_ISO_DATE);
+    String stdate = start.format(DateTimeFormatter.BASIC_ISO_DATE);
+    String eddate = end.format(DateTimeFormatter.BASIC_ISO_DATE);
 
     List<KopisPerformanceDto> all = new ArrayList<>();
 
@@ -150,7 +187,7 @@ public class PlaceSyncService {
       // 서버는 +를 공백으로 오해석해서 키가 깨질 수 있다(TourAPI에서 실제로 이 문제로 인증 실패했었음).
       // serviceKey만 URLEncoder로 미리 인코딩하고 build(true)로 이중 인코딩을 막는다.
       String encodedServiceKey = java.net.URLEncoder.encode(serviceKey, java.nio.charset.StandardCharsets.UTF_8);
-      String url = UriComponentsBuilder.fromUriString(KOPIS_LIST_URL)
+      String url = UriComponentsBuilder.fromUriString(baseUrl)
           .queryParam("service", encodedServiceKey)
           .queryParam("stdate", stdate)
           .queryParam("eddate", eddate)

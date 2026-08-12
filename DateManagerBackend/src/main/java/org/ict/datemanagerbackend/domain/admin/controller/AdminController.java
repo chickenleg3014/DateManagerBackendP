@@ -367,11 +367,12 @@ public class AdminController {
         try {
             switch (source) {
                 case "kopis" -> placeSyncService.syncPerformances();
+                case "festival" -> placeSyncService.syncFestivals();
                 case "tourapi" -> tourApiSyncService.syncPlaces();
                 case "museum" -> museumSyncService.syncMuseums();
                 case "naver" -> naverPlaceSyncService.syncPlaces();
                 default -> {
-                    return ResponseEntity.badRequest().body(Map.of("error", "source는 kopis, tourapi, museum, naver 중 하나여야 합니다"));
+                    return ResponseEntity.badRequest().body(Map.of("error", "source는 kopis, festival, tourapi, museum, naver 중 하나여야 합니다"));
                 }
             }
         } catch (Exception e) {
