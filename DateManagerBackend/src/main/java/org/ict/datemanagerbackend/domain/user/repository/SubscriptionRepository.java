@@ -9,8 +9,15 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
+    // 사용자 화면(구독 조회/결제/해지)에서 "이 유저의 현재 구독"을 찾을 때 사용
+    Optional<Subscription> findTopByUserIdOrderByCreatedAtDesc(Long userId);
+
+    // 자동 정기결제 스케줄러가 만료일 지난 ACTIVE 구독을 찾을 때 사용
+    List<Subscription> findByStatusAndExpiresAtBefore(String status, LocalDateTime cutoff);
+
     boolean existsByUserIdAndStatus(Long userId, String status);
 
     // 대시보드 구독 증가 추이 집계용
