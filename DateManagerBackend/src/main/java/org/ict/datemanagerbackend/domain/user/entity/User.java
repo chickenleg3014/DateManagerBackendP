@@ -44,6 +44,10 @@ public class User {
     @Column(name = "password_hash")
     private String passwordHash;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
-    private LocalDateTime createdAt;
+    // 주의: users 테이블은 DB 레벨 DEFAULT가 없다(JPA ddl-auto로만 생성된 테이블이라 Hibernate가
+    // 컬럼 기본값까지는 자동으로 만들어주지 않음, Place.createdAt과 동일한 이유). insertable=false로
+    // DB 기본값에 의존했던 게 실제로는 항상 null이 되는 버그였어서 @Builder.Default로 교체.
+    @Builder.Default
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
 }
