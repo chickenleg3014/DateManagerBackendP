@@ -2,15 +2,20 @@ package org.ict.datemanagerbackend.domain.user.controller;
 
 import org.ict.datemanagerbackend.domain.user.entity.User;
 import org.ict.datemanagerbackend.domain.user.repository.UserRepository;
+import org.ict.datemanagerbackend.domain.user.service.ProfileImageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -20,10 +25,13 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ProfileImageService profileImageService;
 
-    public UserController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserController(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                           ProfileImageService profileImageService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.profileImageService = profileImageService;
     }
 
     public record UpdateMeRequest(String nickname, String gender) {
@@ -83,12 +91,33 @@ public class UserController {
         return ResponseEntity.ok(Map.of("success", true));
     }
 
+    // 회원가입 때는 선택 업로드, 마이페이지에서는 언제든 재업로드 가능 - 둘 다 이 엔드포인트 하나로 처리한다
+    // (재업로드하면 기존 S3 객체는 그대로 두고 새 객체만 추가 - 정리는 지금 범위 밖).
+    @PostMapping("/photo")
+    public ResponseEntity<?> uploadPhoto(Authentication authentication, @RequestParam("file") MultipartFile file) {
+        ProfileImageService.ValidationError validationError = profileImageService.validate(file);
+        if (validationError != null) {
+            return ResponseEntity.badRequest().body(Map.of("error", validationError.message()));
+        }
+        Long userId = (Long) authentication.getPrincipal();
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error", "사용자를 찾을 수 없습니다"));
+        }
+        User user = userOpt.get();
+        String url = profileImageService.upload(userId, file);
+        user.setProfileImageUrl(url);
+        userRepository.save(user);
+        return ResponseEntity.ok(toResponse(user));
+    }
+
     private Map<String, Object> toResponse(User user) {
-        return Map.of(
-                "id", user.getId(),
-                "email", user.getEmail(),
-                "nickname", user.getNickname(),
-                "gender", user.getGender()
-        );
+        Map<String, Object> res = new HashMap<>();
+        res.put("id", user.getId());
+        res.put("email", user.getEmail());
+        res.put("nickname", user.getNickname());
+        res.put("gender", user.getGender());
+        res.put("profileImageUrl", user.getProfileImageUrl());
+        return res;
     }
 }
