@@ -1,6 +1,6 @@
 package org.ict.datemanagerbackend.domain.place.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ict.datemanagerbackend.domain.place.dto.TourApiPlaceDto;
@@ -40,11 +40,13 @@ public class TourApiSyncService {
       "14", "문화시설",
       "15", "공연",
       "28", "액티비티",
+      "32", "숙박", // CSV로 임포트한 숙박(문화_숙박업.csv)엔 사진이 없어서, 사진 있는 숙박 데이터를 이걸로 보강
       "38", "쇼핑",
       "39", "맛집"
   );
 
   private final PlaceRepository placeRepository;
+  private final PlaceDedupService placeDedupService;
   private final RestTemplate restTemplate = new RestTemplate();
 
   // application.yaml의 tourapi.service-key 값을 그대로 주입받음 (yaml -> .env의 TOUR_API_SERVICE_KEY로 연결됨)
@@ -82,6 +84,19 @@ public class TourApiSyncService {
           place.setLongitude(lng);
           place.setImageUrl(image);
           placeRepository.save(place);
+          updated++;
+          continue;
+        }
+
+        // external_source+external_id로는 못 걸러낸다 - 같은 실제 장소가 다른 소스(KOPIS/네이버/카카오
+        // 등)에서 이미 저장돼 있을 수 있으므로 이름+좌표로 한 번 더 확인한다.
+        Optional<Place> duplicate = placeDedupService.findDuplicate(p.title(), lat, lng);
+        if (duplicate.isPresent()) {
+          Place place = duplicate.get();
+          if (place.getImageUrl() == null || place.getImageUrl().isBlank()) {
+            place.setImageUrl(image); // 이미지 없던 기존 장소면 이번 소스의 이미지로 채워줌
+            placeRepository.save(place);
+          }
           updated++;
         } else {
           Place place = Place.builder()
@@ -124,19 +139,27 @@ public class TourApiSyncService {
     List<TourApiPlaceDto> all = new ArrayList<>();
 
     for (int page = 1; page <= TOURAPI_MAX_PAGES; page++) {
+      // serviceKey의 +,/,=를 URLEncoder로 직접 인코딩(UriComponentsBuilder.encode()는 +를 인코딩 안 해서
+      // 공공데이터포털 서버가 공백으로 오해석하는 문제가 있었음).
+      String encodedServiceKey = java.net.URLEncoder.encode(serviceKey, java.nio.charset.StandardCharsets.UTF_8);
       String url = UriComponentsBuilder.fromUriString(LIST_URL)
-          .queryParam("serviceKey", serviceKey)
+          .queryParam("serviceKey", encodedServiceKey)
           .queryParam("MobileOS", "ETC")
           .queryParam("MobileApp", "DateManager")
           .queryParam("_type", "json")
           .queryParam("numOfRows", TOURAPI_PAGE_SIZE)
           .queryParam("pageNo", page)
           .queryParam("contentTypeId", contentTypeId)
+          .build(true) // true: 위 값들을 이미 인코딩된 것으로 취급 (serviceKey 이중 인코딩 방지)
           .toUriString();
 
       List<TourApiPlaceDto> pageItems;
       try {
-        JsonNode root = restTemplate.getForObject(url, JsonNode.class);
+        // 주의: getForObject(String, ...)는 문자열을 URI 템플릿으로 보고 내부적으로 다시 한 번
+        // 인코딩한다 - 이미 인코딩해둔 serviceKey가 %2F -> %252F 처럼 이중 인코딩되어 완전히 다른
+        // 값이 전송되는 버그가 있었다("등록되지 않은 서비스키" 에러의 진짜 원인). URI로 직접 넘기면
+        // RestTemplate이 재인코딩 없이 그대로 보낸다.
+        JsonNode root = restTemplate.getForObject(java.net.URI.create(url), JsonNode.class);
         if (root == null) break;
 
         JsonNode items = root.path("response").path("body").path("items").path("item");

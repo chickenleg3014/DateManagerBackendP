@@ -4,6 +4,10 @@ import org.ict.datemanagerbackend.domain.couple.entity.Couple;
 import org.ict.datemanagerbackend.domain.couple.entity.CoupleMember;
 import org.ict.datemanagerbackend.domain.couple.repository.CoupleMemberRepository;
 import org.ict.datemanagerbackend.domain.couple.repository.CoupleRepository;
+import org.ict.datemanagerbackend.domain.place.repository.PlaceRepository;
+import org.ict.datemanagerbackend.domain.place.service.MuseumSyncService;
+import org.ict.datemanagerbackend.domain.place.service.PlaceSyncService;
+import org.ict.datemanagerbackend.domain.place.service.TourApiSyncService;
 import org.ict.datemanagerbackend.domain.user.entity.User;
 import org.ict.datemanagerbackend.domain.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +21,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,15 +42,25 @@ public class AdminController {
     private final UserRepository userRepository;
     private final CoupleRepository coupleRepository;
     private final CoupleMemberRepository coupleMemberRepository;
+    private final PlaceRepository placeRepository;
+    private final PlaceSyncService placeSyncService;
+    private final TourApiSyncService tourApiSyncService;
+    private final MuseumSyncService museumSyncService;
 
     @Value("${app.admin-email}")
     private String adminEmail;
 
     public AdminController(UserRepository userRepository, CoupleRepository coupleRepository,
-                            CoupleMemberRepository coupleMemberRepository) {
+                            CoupleMemberRepository coupleMemberRepository, PlaceRepository placeRepository,
+                            PlaceSyncService placeSyncService, TourApiSyncService tourApiSyncService,
+                            MuseumSyncService museumSyncService) {
         this.userRepository = userRepository;
         this.coupleRepository = coupleRepository;
         this.coupleMemberRepository = coupleMemberRepository;
+        this.placeRepository = placeRepository;
+        this.placeSyncService = placeSyncService;
+        this.tourApiSyncService = tourApiSyncService;
+        this.museumSyncService = museumSyncService;
     }
 
     public record AdminUserDto(Long id, String email, String nickname, String gender, LocalDateTime createdAt) {
@@ -194,5 +209,45 @@ public class AdminController {
                         cm.getUser().getEmail(), cm.getRoleType()))
                 .toList();
         return new AdminCoupleDto(couple.getId(), couple.getStatus(), couple.getConnectedAt(), members);
+    }
+
+    // 장소 데이터 동기화는 원래 매일 새벽에 자동(@Scheduled)으로만 도는데, 개발 중 수동으로
+    // 바로 실행해서 결과를 확인하고 싶을 때 쓰는 관리자 전용 트리거. 외부 API를 여러 번
+    // 호출하느라 응답이 오래 걸릴 수 있어(수십 초~수 분) 동기 방식으로 그대로 기다린다.
+    @PostMapping("/places/sync/{source}")
+    public ResponseEntity<?> triggerPlaceSync(Authentication authentication, @PathVariable String source) {
+        if (!isAdmin(currentUser(authentication))) {
+            return ResponseEntity.status(403).body(Map.of("error", "관리자만 접근할 수 있습니다"));
+        }
+        try {
+            switch (source) {
+                case "kopis" -> placeSyncService.syncPerformances();
+                case "tourapi" -> tourApiSyncService.syncPlaces();
+                case "museum" -> museumSyncService.syncMuseums();
+                default -> {
+                    return ResponseEntity.badRequest().body(Map.of("error", "source는 kopis, tourapi, museum 중 하나여야 합니다"));
+                }
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(502).body(Map.of("error", "동기화 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+        return placesSyncStatus();
+    }
+
+    @GetMapping("/places/sync-status")
+    public ResponseEntity<?> placesSyncStatusEndpoint(Authentication authentication) {
+        if (!isAdmin(currentUser(authentication))) {
+            return ResponseEntity.status(403).body(Map.of("error", "관리자만 접근할 수 있습니다"));
+        }
+        return placesSyncStatus();
+    }
+
+    private ResponseEntity<?> placesSyncStatus() {
+        Map<String, Long> counts = new java.util.LinkedHashMap<>();
+        for (Object[] row : placeRepository.countGroupedByCategory()) {
+            counts.put((String) row[0], (Long) row[1]);
+        }
+        counts.put("전체", placeRepository.count());
+        return ResponseEntity.ok(counts);
     }
 }

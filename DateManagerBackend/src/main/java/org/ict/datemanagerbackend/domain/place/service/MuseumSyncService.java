@@ -1,6 +1,6 @@
 package org.ict.datemanagerbackend.domain.place.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ict.datemanagerbackend.domain.place.dto.MuseumDto;
@@ -46,6 +46,7 @@ public class MuseumSyncService {
   private static final int MAX_PAGES = 10; // 500 * 10 = 최대 5000건까지 (현재 전국 1074건 확인됨, 여유있게 설정)
 
   private final PlaceRepository placeRepository;
+  private final PlaceDedupService placeDedupService;
   private final RestTemplate restTemplate = new RestTemplate();
 
   // TourApiSyncService와 같은 공공데이터포털 계정 키를 공유해서 사용한다(데이터셋별 활용신청은 별도로 필요).
@@ -80,6 +81,14 @@ public class MuseumSyncService {
         place.setLongitude(lng);
         placeRepository.save(place);
         updated++;
+        continue;
+      }
+
+      // 박물관/미술관은 TourAPI의 "문화시설" 카테고리와 겹칠 수 있어(예: 국립중앙박물관이 양쪽에 다 있을
+      // 수 있음) 이름+좌표로 다른 소스에 이미 있는지 한 번 더 확인한다.
+      Optional<Place> duplicate = placeDedupService.findDuplicate(m.fcltyNm(), lat, lng);
+      if (duplicate.isPresent()) {
+        updated++;
       } else {
         Place place = Place.builder()
             .name(m.fcltyNm())
@@ -103,15 +112,21 @@ public class MuseumSyncService {
     List<MuseumDto> all = new ArrayList<>();
 
     for (int page = 1; page <= MAX_PAGES; page++) {
+      // serviceKey의 +,/,= 같은 특수문자를 URLEncoder로 직접 인코딩(UriComponentsBuilder.encode()는
+      // +를 인코딩하지 않아 공공데이터포털 서버가 공백으로 오해석하는 문제가 있었음) 후 build(true)로
+      // 이중 인코딩을 막는다.
       String url = UriComponentsBuilder.fromUriString(LIST_URL)
-          .queryParam("serviceKey", serviceKey)
+          .queryParam("serviceKey", java.net.URLEncoder.encode(serviceKey, java.nio.charset.StandardCharsets.UTF_8))
           .queryParam("pageNo", page)
           .queryParam("numOfRows", PAGE_SIZE)
           .queryParam("type", "json")
+          .build(true)
           .toUriString();
 
       try {
-        JsonNode root = restTemplate.getForObject(url, JsonNode.class);
+        // getForObject(String, ...)는 이미 인코딩된 URL을 다시 인코딩해버리는(이중 인코딩) 문제가 있어
+        // URI로 직접 넘긴다 (TourAPI에서 이 문제로 실제 인증 실패를 겪었음).
+        JsonNode root = restTemplate.getForObject(java.net.URI.create(url), JsonNode.class);
         if (root == null) break;
 
         JsonNode items = root.path("body").path("items").path("item");

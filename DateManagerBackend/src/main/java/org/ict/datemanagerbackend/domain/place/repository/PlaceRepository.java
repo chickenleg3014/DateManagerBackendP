@@ -4,7 +4,9 @@ import org.ict.datemanagerbackend.domain.place.entity.Place;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 // JpaRepository<Place, Long>을 상속만 하면, save/findById/findAll/delete 같은 기본 CRUD 메서드를
@@ -18,5 +20,18 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
 
   // 큐레이션/코스빌더에서 카테고리(맛집, 숙박 등)별로 장소를 페이지 단위 조회할 때 사용.
   Page<Place> findByCategory(String category, Pageable pageable);
+
+  // 관리자 페이지에서 카테고리별 수집량을 확인할 때 사용. TourAPI/KOPIS/박물관 등 소스마다
+  // 카테고리 값이 다양해서(관광지/문화시설/공연/액티비티/쇼핑/맛집/숙박/박물관·미술관 등)
+  // 하드코딩하지 않고 실제 저장된 값을 그대로 집계한다. 결과의 각 Object[]는 [category, count].
+  @Query("SELECT p.category, COUNT(p) FROM Place p GROUP BY p.category ORDER BY COUNT(p) DESC")
+  List<Object[]> countGroupedByCategory();
+
+  // 같은 실제 장소가 TourAPI/KOPIS/네이버/카카오 등 서로 다른 소스에서 각각 들어와 중복 저장되는 걸
+  // 막기 위해, 새 장소를 저장하기 전에 좌표가 가까운(대략 위경도 사각형 범위) 기존 장소들을 먼저 찾아서
+  // PlaceDedupService가 이름까지 비교한다. 위경도 컬럼엔 인덱스가 없어 범위가 아주 넓으면 느릴 수 있지만,
+  // 반경을 좁게(약 50m) 잡아서 쓰므로 실사용에는 문제없다.
+  @Query("SELECT p FROM Place p WHERE p.latitude BETWEEN :minLat AND :maxLat AND p.longitude BETWEEN :minLng AND :maxLng")
+  List<Place> findNearby(double minLat, double maxLat, double minLng, double maxLng);
 
 }

@@ -1,6 +1,6 @@
 package org.ict.datemanagerbackend.weather.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.ict.datemanagerbackend.weather.dto.WeatherResponse;
 import org.springframework.beans.factory.annotation.Value;

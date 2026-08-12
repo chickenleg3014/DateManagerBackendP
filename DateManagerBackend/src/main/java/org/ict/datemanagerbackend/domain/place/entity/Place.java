@@ -36,7 +36,8 @@ public class Place {
   private Long id; // 장소 ID (PK)
 
   @Setter
-  @Column(name = "name", nullable = false, length = 100)
+  // 100자로 뒀다가 KOPIS 공연 제목 중 100자를 넘는 게 있어서(ORA-12899) 255로 넓힘
+  @Column(name = "name", nullable = false, length = 255)
   private String name; // 장소명
 
   @Setter

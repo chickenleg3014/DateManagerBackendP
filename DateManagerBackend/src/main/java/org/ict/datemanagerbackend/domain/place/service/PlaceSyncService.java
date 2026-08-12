@@ -34,6 +34,10 @@ import java.util.Optional;
  * 흐름: [1] KOPIS 목록에 HTTP 요청 → [2] 공연별 상세조회로 공연시설 ID(mt10id) 확보
  *      → [3] 시설 ID별로 상세조회를 한 번씩만 호출해 주소/위경도 확보(같은 시설은 캐시로 재사용)
  *      → [4] 이미 저장된 공연이면 갱신, 처음 보는 공연이면 새로 저장(upsert)
+ *
+ * 주의: TourApiSyncService/MuseumSyncService와 달리 PlaceDedupService(이름+좌표 중복 확인)를 안 쓴다.
+ * 여기서 Place.name은 "공연 제목"(예: 레미제라블)이지 장소명이 아니라서, 같은 위치의 다른 소스
+ * 장소(예: 세종문화회관)와 이름이 겹칠 일이 없고, 잘못 매칭되면 오히려 진짜 신규 공연을 놓치게 된다.
  */
 @Service
 @RequiredArgsConstructor // final 필드(placeRepository)를 인자로 받는 생성자를 롬복이 자동으로 만들어줌 (의존성 주입용)
@@ -141,17 +145,23 @@ public class PlaceSyncService {
     List<KopisPerformanceDto> all = new ArrayList<>();
 
     for (int page = 1; page <= KOPIS_MAX_PAGES; page++) {
-      // UriComponentsBuilder: URL에 ?key=value&key2=value2... 를 안전하게(URL 인코딩 포함) 붙여주는 도구
+      // UriComponentsBuilder.encode()는 RFC 3986 기준으로 +,/를 인코딩 안 하는데, 공공데이터포털
+      // 서버는 +를 공백으로 오해석해서 키가 깨질 수 있다(TourAPI에서 실제로 이 문제로 인증 실패했었음).
+      // serviceKey만 URLEncoder로 미리 인코딩하고 build(true)로 이중 인코딩을 막는다.
+      String encodedServiceKey = java.net.URLEncoder.encode(serviceKey, java.nio.charset.StandardCharsets.UTF_8);
       String url = UriComponentsBuilder.fromUriString(KOPIS_LIST_URL)
-          .queryParam("service", serviceKey)
+          .queryParam("service", encodedServiceKey)
           .queryParam("stdate", stdate)
           .queryParam("eddate", eddate)
           .queryParam("cpage", page)
           .queryParam("rows", KOPIS_PAGE_SIZE)
+          .build(true)
           .toUriString();
 
       // GET 요청을 보내고, 응답 body를 그대로 문자열(XML)로 받음
-      String xml = restTemplate.getForObject(url, String.class);
+      // getForObject(String, ...)는 이미 인코딩된 URL을 다시 인코딩해버리는(이중 인코딩) 문제가 있어
+      // URI로 직접 넘긴다 (TourAPI에서 이 문제로 실제 인증 실패를 겪었음).
+      String xml = restTemplate.getForObject(java.net.URI.create(url), String.class);
       List<KopisPerformanceDto> pageItems = parsePerformances(xml);
       all.addAll(pageItems);
 
@@ -166,11 +176,14 @@ public class PlaceSyncService {
   /** 공연 상세조회(mt20id)를 호출해 그 공연이 열리는 시설의 ID(mt10id)를 얻어옴 */
   private String fetchMt10id(String mt20id) {
     String url = UriComponentsBuilder.fromUriString(KOPIS_LIST_URL + "/" + mt20id)
-        .queryParam("service", serviceKey)
+        .queryParam("service", java.net.URLEncoder.encode(serviceKey, java.nio.charset.StandardCharsets.UTF_8))
+        .build(true)
         .toUriString();
 
     try {
-      String xml = restTemplate.getForObject(url, String.class);
+      // getForObject(String, ...)는 이미 인코딩된 URL을 다시 인코딩해버리는(이중 인코딩) 문제가 있어
+      // URI로 직접 넘긴다 (TourAPI에서 이 문제로 실제 인증 실패를 겪었음).
+      String xml = restTemplate.getForObject(java.net.URI.create(url), String.class);
       Document doc = parseXml(xml);
       if (doc == null) return null;
 
@@ -187,11 +200,14 @@ public class PlaceSyncService {
   /** 공연시설 상세조회(mt10id)를 호출해 주소/위경도를 얻어옴 */
   private KopisFacilityDto fetchFacility(String mt10id) {
     String url = UriComponentsBuilder.fromUriString(KOPIS_FACILITY_URL + "/" + mt10id)
-        .queryParam("service", serviceKey)
+        .queryParam("service", java.net.URLEncoder.encode(serviceKey, java.nio.charset.StandardCharsets.UTF_8))
+        .build(true)
         .toUriString();
 
     try {
-      String xml = restTemplate.getForObject(url, String.class);
+      // getForObject(String, ...)는 이미 인코딩된 URL을 다시 인코딩해버리는(이중 인코딩) 문제가 있어
+      // URI로 직접 넘긴다 (TourAPI에서 이 문제로 실제 인증 실패를 겪었음).
+      String xml = restTemplate.getForObject(java.net.URI.create(url), String.class);
       Document doc = parseXml(xml);
       if (doc == null) return null;
 
