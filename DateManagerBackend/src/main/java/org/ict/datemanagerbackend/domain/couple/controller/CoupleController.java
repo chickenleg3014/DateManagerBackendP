@@ -81,8 +81,9 @@ public class CoupleController {
   public record InviteResponse(String token, String inviteUrl, LocalDateTime expiresAt) {
   }
 
-  // 상대방 정보. 아바타를 성별에 맞게 보여주기 위해 gender까지 내려준다(프론트 avatarForGender 참고).
-  public record PartnerDto(Long userId, String nickname, String email, String gender) {
+  // 상대방 정보. profileImageUrl이 있으면 프론트가 그대로 쓰고, 없으면 gender 기준 기본 이미지로
+  // 대체한다(프론트 Avatar 컴포넌트 참고 - 업로드 사진 우선, 없으면 성별 기본 이미지).
+  public record PartnerDto(Long userId, String nickname, String email, String gender, String profileImageUrl) {
   }
 
   // 연결 상태 조회(GET /status) 응답. 연결 안 됐으면 partner/connectedAt은 null로 내려간다.
@@ -257,7 +258,8 @@ public class CoupleController {
         partnerMembership.getUser().getId(),
         partnerMembership.getUser().getNickname(),
         partnerMembership.getUser().getEmail(),
-        partnerMembership.getUser().getGender()
+        partnerMembership.getUser().getGender(),
+        partnerMembership.getUser().getProfileImageUrl()
     );
 
     return ResponseEntity.ok(new StatusResponse(true, partner, couple.getConnectedAt()));
