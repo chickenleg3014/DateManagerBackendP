@@ -6,6 +6,7 @@ import org.ict.datemanagerbackend.domain.couple.repository.CoupleMemberRepositor
 import org.ict.datemanagerbackend.domain.couple.repository.CoupleRepository;
 import org.ict.datemanagerbackend.domain.place.repository.PlaceRepository;
 import org.ict.datemanagerbackend.domain.place.service.MuseumSyncService;
+import org.ict.datemanagerbackend.domain.place.service.NaverPlaceSyncService;
 import org.ict.datemanagerbackend.domain.place.service.PlaceSyncService;
 import org.ict.datemanagerbackend.domain.place.service.TourApiSyncService;
 import org.ict.datemanagerbackend.domain.report.entity.Report;
@@ -58,6 +59,7 @@ public class AdminController {
     private final PlaceSyncService placeSyncService;
     private final TourApiSyncService tourApiSyncService;
     private final MuseumSyncService museumSyncService;
+    private final NaverPlaceSyncService naverPlaceSyncService;
     private final ReportRepository reportRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final LoginLogRepository loginLogRepository;
@@ -68,7 +70,8 @@ public class AdminController {
     public AdminController(UserRepository userRepository, CoupleRepository coupleRepository,
                             CoupleMemberRepository coupleMemberRepository, PlaceRepository placeRepository,
                             PlaceSyncService placeSyncService, TourApiSyncService tourApiSyncService,
-                            MuseumSyncService museumSyncService, ReportRepository reportRepository,
+                            MuseumSyncService museumSyncService, NaverPlaceSyncService naverPlaceSyncService,
+                            ReportRepository reportRepository,
                             SubscriptionRepository subscriptionRepository, LoginLogRepository loginLogRepository) {
         this.userRepository = userRepository;
         this.coupleRepository = coupleRepository;
@@ -77,6 +80,7 @@ public class AdminController {
         this.placeSyncService = placeSyncService;
         this.tourApiSyncService = tourApiSyncService;
         this.museumSyncService = museumSyncService;
+        this.naverPlaceSyncService = naverPlaceSyncService;
         this.reportRepository = reportRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.loginLogRepository = loginLogRepository;
@@ -365,8 +369,9 @@ public class AdminController {
                 case "kopis" -> placeSyncService.syncPerformances();
                 case "tourapi" -> tourApiSyncService.syncPlaces();
                 case "museum" -> museumSyncService.syncMuseums();
+                case "naver" -> naverPlaceSyncService.syncPlaces();
                 default -> {
-                    return ResponseEntity.badRequest().body(Map.of("error", "source는 kopis, tourapi, museum 중 하나여야 합니다"));
+                    return ResponseEntity.badRequest().body(Map.of("error", "source는 kopis, tourapi, museum, naver 중 하나여야 합니다"));
                 }
             }
         } catch (Exception e) {

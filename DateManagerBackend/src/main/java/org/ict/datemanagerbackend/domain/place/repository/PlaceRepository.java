@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -33,5 +34,12 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
   // 반경을 좁게(약 50m) 잡아서 쓰므로 실사용에는 문제없다.
   @Query("SELECT p FROM Place p WHERE p.latitude BETWEEN :minLat AND :maxLat AND p.longitude BETWEEN :minLng AND :maxLng")
   List<Place> findNearby(double minLat, double maxLat, double minLng, double maxLng);
+
+  // 네이버 지역 검색처럼 검색어 기반이라 매 실행마다 결과가 달라질 수 있는 소스는 upsert 대신
+  // "이번 실행 전 기존 데이터를 지우고 새로 채우는" 전체 교체 방식을 쓴다 - 폐업한 곳도 자동 정리됨.
+  // derived delete 메서드는 대상 엔티티를 조회한 뒤 개별 remove()를 호출하는 방식이라, 호출하는 쪽에
+  // 트랜잭션이 없으면 "No EntityManager with actual transaction available" 에러가 나서 직접 @Transactional을 붙인다.
+  @Transactional
+  void deleteByExternalSource(String externalSource);
 
 }
