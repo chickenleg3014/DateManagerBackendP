@@ -8,6 +8,8 @@ import org.ict.datemanagerbackend.domain.place.repository.PlaceRepository;
 import org.ict.datemanagerbackend.domain.place.service.MuseumSyncService;
 import org.ict.datemanagerbackend.domain.place.service.PlaceSyncService;
 import org.ict.datemanagerbackend.domain.place.service.TourApiSyncService;
+import org.ict.datemanagerbackend.domain.report.entity.Report;
+import org.ict.datemanagerbackend.domain.report.repository.ReportRepository;
 import org.ict.datemanagerbackend.domain.user.entity.User;
 import org.ict.datemanagerbackend.domain.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,6 +48,7 @@ public class AdminController {
     private final PlaceSyncService placeSyncService;
     private final TourApiSyncService tourApiSyncService;
     private final MuseumSyncService museumSyncService;
+    private final ReportRepository reportRepository;
 
     @Value("${app.admin-email}")
     private String adminEmail;
@@ -53,7 +56,7 @@ public class AdminController {
     public AdminController(UserRepository userRepository, CoupleRepository coupleRepository,
                             CoupleMemberRepository coupleMemberRepository, PlaceRepository placeRepository,
                             PlaceSyncService placeSyncService, TourApiSyncService tourApiSyncService,
-                            MuseumSyncService museumSyncService) {
+                            MuseumSyncService museumSyncService, ReportRepository reportRepository) {
         this.userRepository = userRepository;
         this.coupleRepository = coupleRepository;
         this.coupleMemberRepository = coupleMemberRepository;
@@ -61,6 +64,7 @@ public class AdminController {
         this.placeSyncService = placeSyncService;
         this.tourApiSyncService = tourApiSyncService;
         this.museumSyncService = museumSyncService;
+        this.reportRepository = reportRepository;
     }
 
     public record AdminUserDto(Long id, String email, String nickname, String gender, LocalDateTime createdAt) {
@@ -78,7 +82,15 @@ public class AdminController {
     public record AdminUpdateCoupleRequest(String status) {
     }
 
+    public record AdminReportDto(Long id, Long reporterUserId, String reporterNickname, String targetType,
+                                  Long targetId, String reason, String status, LocalDateTime createdAt) {
+    }
+
+    public record AdminUpdateReportRequest(String status) {
+    }
+
     private static final Set<String> VALID_COUPLE_STATUSES = Set.of("ACTIVE", "DISCONNECTED");
+    private static final Set<String> VALID_REPORT_STATUSES = Set.of("PENDING", "RESOLVED", "REJECTED");
 
     private User currentUser(Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
@@ -201,6 +213,42 @@ public class AdminController {
             return ResponseEntity.status(409).body(Map.of("error", "이 커플은 기념일·채팅 등 연결된 데이터가 있어 삭제할 수 없습니다"));
         }
         return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    @GetMapping("/reports")
+    public ResponseEntity<?> listReports(Authentication authentication,
+                                          @RequestParam(required = false) String status,
+                                          @PageableDefault(size = 15, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        if (!isAdmin(currentUser(authentication))) {
+            return ResponseEntity.status(403).body(Map.of("error", "관리자만 접근할 수 있습니다"));
+        }
+        Page<Report> page = (status == null || status.isBlank())
+                ? reportRepository.findAll(pageable)
+                : reportRepository.findByStatus(status, pageable);
+        return ResponseEntity.ok(page.map(this::toReportDto));
+    }
+
+    @PutMapping("/reports/{id}")
+    public ResponseEntity<?> updateReportStatus(Authentication authentication, @PathVariable Long id,
+                                                 @RequestBody AdminUpdateReportRequest req) {
+        if (!isAdmin(currentUser(authentication))) {
+            return ResponseEntity.status(403).body(Map.of("error", "관리자만 접근할 수 있습니다"));
+        }
+        if (req.status() == null || !VALID_REPORT_STATUSES.contains(req.status())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "status는 PENDING, RESOLVED, REJECTED 중 하나여야 합니다"));
+        }
+        Report report = reportRepository.findById(id).orElse(null);
+        if (report == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "신고 내역을 찾을 수 없습니다"));
+        }
+        report.setStatus(req.status());
+        reportRepository.save(report);
+        return ResponseEntity.ok(toReportDto(report));
+    }
+
+    private AdminReportDto toReportDto(Report r) {
+        return new AdminReportDto(r.getId(), r.getReporter().getId(), r.getReporter().getNickname(),
+                r.getTargetType(), r.getTargetId(), r.getReason(), r.getStatus(), r.getCreatedAt());
     }
 
     private AdminCoupleDto toCoupleDto(Couple couple) {
