@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -52,5 +53,12 @@ public class Couple {
   @Builder.Default
   @Column(name = "connected_at", updatable = false)
   private LocalDateTime connectedAt = LocalDateTime.now(); // 연동(커플 성사) 일시 - Couple이 만들어지는 순간의 시각
+
+  // 커플이 "실제로 처음 만난 날짜" - connectedAt(이 사이트에서 연결된 시각)과는 별개의 값이다.
+  // Couple 생성 시점엔 알 수 없고(초대 수락만으로는 만난 날짜를 알 방법이 없음) 나중에
+  // 커플싱크 탭에서 두 사람 중 누구든 직접 입력/수정할 수 있어야 해서 nullable + setter를 둔다.
+  @Setter
+  @Column(name = "met_date")
+  private LocalDate metDate;
 
 }

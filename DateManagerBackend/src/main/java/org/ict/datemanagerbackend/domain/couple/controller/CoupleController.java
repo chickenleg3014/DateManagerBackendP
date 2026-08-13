@@ -15,9 +15,12 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -86,8 +89,13 @@ public class CoupleController {
   public record PartnerDto(Long userId, String nickname, String email, String gender, String profileImageUrl) {
   }
 
-  // 연결 상태 조회(GET /status) 응답. 연결 안 됐으면 partner/connectedAt은 null로 내려간다.
-  public record StatusResponse(boolean linked, PartnerDto partner, LocalDateTime connectedAt) {
+  // 연결 상태 조회(GET /status) 응답. 연결 안 됐으면 partner/connectedAt/metDate는 null로 내려간다.
+  // metDate는 connectedAt(이 사이트에서 연결된 시각)과 별개로, 두 사람이 실제로 처음 만난 날짜다.
+  public record StatusResponse(boolean linked, PartnerDto partner, LocalDateTime connectedAt, LocalDate metDate) {
+  }
+
+  // 만난 날짜 등록/수정(PUT /met-date) 요청. metDate가 null이면 등록 취소(초기화)로 처리한다.
+  public record MetDateRequest(LocalDate metDate) {
   }
 
   // ── 내부 헬퍼 메서드 ────────────────────────────────────────────────────
@@ -241,8 +249,8 @@ public class CoupleController {
     // 1단계: 내가 활성 상태로 속한 couple_members 행이 있는지 확인
     Optional<CoupleMember> myMembership = coupleMemberRepository.findByUser_IdAndLeftAtIsNull(me.getId());
     if (myMembership.isEmpty()) {
-      // 연결된 적 없음 -> partner/connectedAt은 그냥 null로 응답
-      return ResponseEntity.ok(new StatusResponse(false, null, null));
+      // 연결된 적 없음 -> partner/connectedAt/metDate는 그냥 null로 응답
+      return ResponseEntity.ok(new StatusResponse(false, null, null, null));
     }
 
     // 2단계: 내가 속한 Couple의 멤버 전체(나 + 상대방, 최대 2명)를 불러와서
@@ -262,7 +270,37 @@ public class CoupleController {
         partnerMembership.getUser().getProfileImageUrl()
     );
 
-    return ResponseEntity.ok(new StatusResponse(true, partner, couple.getConnectedAt()));
+    return ResponseEntity.ok(new StatusResponse(true, partner, couple.getConnectedAt(), couple.getMetDate()));
+  }
+
+  // ── 3-1) 만난 날짜 등록/수정 ─────────────────────────────────────────────
+
+  /**
+   * PUT /api/couple/met-date
+   * 커플로 연결된 두 사람 중 누구든 "실제로 처음 만난 날짜"를 등록/수정할 수 있다.
+   * connectedAt(이 사이트에서 연결된 시각)은 Couple 생성 시점에 자동으로 정해지는 값이라 수정이
+   * 불가능하지만, met_date는 그와 무관하게 사용자가 직접 입력하는 값이라 언제든 바꿀 수 있다.
+   */
+  @PutMapping("/met-date")
+  public ResponseEntity<?> updateMetDate(Authentication authentication, @RequestBody MetDateRequest req) {
+    User me = currentUser(authentication);
+    if (me == null) {
+      return ResponseEntity.status(404).body(Map.of("error", "사용자를 찾을 수 없습니다"));
+    }
+
+    Optional<CoupleMember> myMembership = coupleMemberRepository.findByUser_IdAndLeftAtIsNull(me.getId());
+    if (myMembership.isEmpty()) {
+      return ResponseEntity.status(404).body(Map.of("error", "연결된 커플이 없습니다"));
+    }
+    if (req.metDate() != null && req.metDate().isAfter(LocalDate.now())) {
+      return ResponseEntity.badRequest().body(Map.of("error", "미래 날짜는 입력할 수 없습니다"));
+    }
+
+    Couple couple = myMembership.get().getCouple();
+    couple.setMetDate(req.metDate());
+    coupleRepository.save(couple);
+
+    return ResponseEntity.ok(Map.of("success", true, "metDate", req.metDate() == null ? "" : req.metDate().toString()));
   }
 
   // ── 4) 연결 해제 ───────────────────────────────────────────────────────

@@ -193,15 +193,16 @@ public class AdminController {
     @GetMapping("/users")
     public ResponseEntity<?> listUsers(Authentication authentication,
                                         @RequestParam(required = false) String search,
+                                        @RequestParam(required = false, defaultValue = "email") String field,
                                         @RequestParam(required = false, defaultValue = "all") String filter,
                                         @PageableDefault(size = 15, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         if (!isAdmin(currentUser(authentication))) {
             return ResponseEntity.status(403).body(Map.of("error", "관리자만 접근할 수 있습니다"));
         }
         Page<User> page = switch (filter) {
-            case "subscribed" -> userRepository.searchActiveSubscribed(search, pageable);
-            case "free" -> userRepository.searchActiveFree(search, pageable);
-            default -> userRepository.searchActive(search, pageable);
+            case "subscribed" -> userRepository.searchActiveSubscribed(search, field, pageable);
+            case "free" -> userRepository.searchActiveFree(search, field, pageable);
+            default -> userRepository.searchActive(search, field, pageable);
         };
         Page<AdminUserDto> dtoPage = page.map(this::toUserDto);
         return ResponseEntity.ok(dtoPage);

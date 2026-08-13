@@ -6,6 +6,7 @@ import org.ict.datemanagerbackend.domain.user.service.ProfileImageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -109,6 +111,26 @@ public class UserController {
         user.setProfileImageUrl(url);
         userRepository.save(user);
         return ResponseEntity.ok(toResponse(user));
+    }
+
+    // 회원 자진 탈퇴. 관리자의 강제 탈퇴(AdminController.deleteUser)와 동일하게 실제 row는 지우지 않고
+    // withdrawnAt만 채우는 soft-delete로 처리한다 - 탈퇴 후 1년 지나면 WithdrawnUserCleanupService가
+    // 배치로 실제 삭제한다. 토큰 자체를 서버에서 무효화하는 방식은 없으므로(스테이트리스 JWT),
+    // 탈퇴 처리 후 프론트에서 로컬 토큰을 지우는 것으로 즉시 로그아웃 효과를 낸다.
+    @DeleteMapping
+    public ResponseEntity<?> withdraw(Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error", "사용자를 찾을 수 없습니다"));
+        }
+        User user = userOpt.get();
+        if (user.getWithdrawnAt() != null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "이미 탈퇴 처리된 계정입니다"));
+        }
+        user.setWithdrawnAt(LocalDateTime.now());
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     private Map<String, Object> toResponse(User user) {
