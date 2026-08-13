@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -29,7 +30,14 @@ import java.time.LocalDateTime;
 @Builder
 public class PlaceStyle {
 
+  // Spring Data JPA가 "@Id를 연관관계에 직접 붙인" 엔티티는 Repository를 만들 때
+  // "IdClass가 없다"고 오인해서 실패하는 문제가 있어(2026-08-13 PlaceStyleRepository 생성 중 발견),
+  // JPA 표준 "공유 기본키(shared primary key)" 패턴인 @MapsId로 바꿨다 - 실제 DB 컬럼(place_id)은 그대로.
   @Id
+  @Column(name = "place_id")
+  private Long placeId;
+
+  @MapsId
   @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "place_id")
   private Place place; // 장소와 PK를 공유하는 1:1 관계
