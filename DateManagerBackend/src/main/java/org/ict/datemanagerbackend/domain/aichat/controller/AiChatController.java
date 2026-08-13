@@ -33,6 +33,15 @@ public class AiChatController {
     return userRepository.findById(userId).orElse(null);
   }
 
+  private Double parseNullableDouble(String value) {
+    if (value == null || value.isBlank()) return null;
+    try {
+      return Double.parseDouble(value);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
   public record SessionResponse(Long sessionId, String title, LocalDateTime createdAt) {
   }
 
@@ -63,9 +72,12 @@ public class AiChatController {
     if (text == null || text.isBlank()) {
       return ResponseEntity.badRequest().body(Map.of("error", "메시지 내용(text)이 비어있습니다"));
     }
+    // lat/lon은 선택값 - 프론트가 위치 권한을 안 줬으면 안 보낼 수 있어서 없으면 null로 둔다.
+    Double lat = parseNullableDouble(body.get("lat"));
+    Double lon = parseNullableDouble(body.get("lon"));
 
     try {
-      AiChatMessage aiMessage = aiChatService.sendMessage(me, sessionId, text);
+      AiChatMessage aiMessage = aiChatService.sendMessage(me, sessionId, text, lat, lon);
       return ResponseEntity.ok(new MessageResponse(
           aiMessage.getId(), aiMessage.getSenderType(), aiMessage.getMessageText(), aiMessage.getCreatedAt()));
     } catch (IllegalArgumentException e) {
