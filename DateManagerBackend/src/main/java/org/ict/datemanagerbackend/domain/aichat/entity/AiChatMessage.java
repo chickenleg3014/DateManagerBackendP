@@ -33,7 +33,9 @@ public class AiChatMessage {
   @Column(name = "message_text", nullable = false)
   private String messageText; // 메시지 내용 (CLOB 매핑)
 
-  @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
-  private LocalDateTime createdAt; // 생성 일시
+  // AiChatSession과 같은 이유로 insertable=false 대신 @Builder.Default 사용(2026-08-13 수정).
+  @Builder.Default
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private LocalDateTime createdAt = LocalDateTime.now(); // 생성 일시
 
 }

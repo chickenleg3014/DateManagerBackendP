@@ -123,3 +123,7 @@ naver:
   search:
     client-id: ${NAVER_SEARCH_CLIENT_ID}
     client-secret: ${NAVER_SEARCH_CLIENT_SECRET}
+
+#OpenAI Chat Completions API 인증키 - AiChatService에서 사용 (결제 전에는 호출 시 401/429 발생 가능)
+openai:
+  api-key: ${OPENAI_API_KEY}
