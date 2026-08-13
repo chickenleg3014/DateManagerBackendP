@@ -53,6 +53,25 @@ public class PlaceController {
     return ResponseEntity.ok(page.map(place -> PlaceResponseDto.from(place, styleByPlaceId.get(place.getId()))));
   }
 
+  // 홈탭 "지역 기반 추천"용 - 접속 좌표(lat/lon)에서 가까운 순으로 최대 limit개를 내려준다.
+  // 페이지네이션 없이 그냥 리스트로 반환(추천 후보 풀로만 쓰이므로 단순하게).
+  @GetMapping("/nearby")
+  public ResponseEntity<List<PlaceResponseDto>> listNearbyPlaces(
+      @RequestParam double lat,
+      @RequestParam double lon,
+      @RequestParam(defaultValue = "300") int limit) {
+    List<Place> places = placeRepository.findNearestPlaces(lat, lon, limit);
+
+    List<Long> placeIds = places.stream().map(Place::getId).toList();
+    Map<Long, PlaceStyle> styleByPlaceId = placeStyleRepository.findByPlace_IdIn(placeIds).stream()
+        .collect(Collectors.toMap(s -> s.getPlace().getId(), s -> s));
+
+    List<PlaceResponseDto> result = places.stream()
+        .map(place -> PlaceResponseDto.from(place, styleByPlaceId.get(place.getId())))
+        .toList();
+    return ResponseEntity.ok(result);
+  }
+
   @GetMapping("/{id}")
   public ResponseEntity<?> getPlace(@PathVariable Long id) {
     Optional<Place> placeOpt = placeRepository.findById(id);

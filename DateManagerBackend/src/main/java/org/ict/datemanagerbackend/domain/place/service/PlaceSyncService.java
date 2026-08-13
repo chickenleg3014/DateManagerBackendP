@@ -3,6 +3,7 @@ package org.ict.datemanagerbackend.domain.place.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ict.datemanagerbackend.domain.place.dto.KopisFacilityDto;
+import org.ict.datemanagerbackend.domain.place.dto.KopisPerformanceDetailDto;
 import org.ict.datemanagerbackend.domain.place.dto.KopisPerformanceDto;
 import org.ict.datemanagerbackend.domain.place.entity.Place;
 import org.ict.datemanagerbackend.domain.place.repository.PlaceRepository;
@@ -117,7 +118,10 @@ public class PlaceSyncService {
       Optional<Place> existing =
           placeRepository.findByExternalSourceAndExternalId(EXTERNAL_SOURCE, p.mt20id());
 
-      String mt10id = fetchMt10id(p.mt20id());
+      // 상세조회 하나로 공연시설 ID(mt10id)뿐 아니라 공연시간/가격/예매링크까지 같이 얻는다
+      // (추가 API 호출 없이 기존에 어차피 부르던 상세조회 응답을 더 활용, 2026-08-13).
+      KopisPerformanceDetailDto detail = fetchDetail(p.mt20id());
+      String mt10id = detail != null ? detail.mt10id() : null;
       KopisFacilityDto facility = mt10id == null
           ? null
           : facilityCache.computeIfAbsent(mt10id, this::fetchFacility);
@@ -126,9 +130,12 @@ public class PlaceSyncService {
       Double lat = facility != null ? parseCoordinate(facility.la()) : null;
       Double lng = facility != null ? parseCoordinate(facility.lo()) : null;
       String category = categoryFn.apply(p);
+      LocalDate startDate = parseKopisDate(p.prfpdfrom());
+      LocalDate endDate = parseKopisDate(p.prfpdto());
+      Integer openRun = "Y".equals(p.openrun()) ? 1 : 0;
 
       if (existing.isPresent()) {
-        // 이미 있으면 새로 만들지 않고, 이름/카테고리/포스터/주소/위경도를 최신 값으로 덮어씀 (update)
+        // 이미 있으면 새로 만들지 않고, 최신 값으로 덮어씀 (update)
         Place place = existing.get();
         place.setName(p.prfnm());
         place.setCategory(category);
@@ -136,6 +143,16 @@ public class PlaceSyncService {
         if (address != null) place.setAddress(address);
         if (lat != null) place.setLatitude(lat);
         if (lng != null) place.setLongitude(lng);
+        place.setStartDate(startDate);
+        place.setEndDate(endDate);
+        place.setIsOpenRun(openRun);
+        place.setPerformanceState(p.prfstate());
+        if (detail != null) {
+          place.setRuntimeText(detail.prfruntime());
+          place.setPriceInfo(detail.pcseguidance());
+          place.setShowTimeInfo(detail.dtguidance());
+          place.setBookingUrl(detail.bookingUrl());
+        }
         placeRepository.save(place);
         updated++;
       } else {
@@ -149,6 +166,14 @@ public class PlaceSyncService {
             .imageUrl(p.poster())
             .externalSource(EXTERNAL_SOURCE)
             .externalId(p.mt20id())
+            .startDate(startDate)
+            .endDate(endDate)
+            .isOpenRun(openRun)
+            .performanceState(p.prfstate())
+            .runtimeText(detail != null ? detail.prfruntime() : null)
+            .priceInfo(detail != null ? detail.pcseguidance() : null)
+            .showTimeInfo(detail != null ? detail.dtguidance() : null)
+            .bookingUrl(detail != null ? detail.bookingUrl() : null)
             .build();
         placeRepository.save(place);
         created++;
@@ -215,8 +240,11 @@ public class PlaceSyncService {
     return all;
   }
 
-  /** 공연 상세조회(mt20id)를 호출해 그 공연이 열리는 시설의 ID(mt10id)를 얻어옴 */
-  private String fetchMt10id(String mt20id) {
+  /**
+   * 공연 상세조회(mt20id)를 호출해 공연시설 ID(mt10id)뿐 아니라 공연시간/가격안내/요일별시간표/
+   * 예매링크까지 한 번에 얻어옴 - 원래 mt10id만 쓰던 걸 그대로 확장(2026-08-13, 추가 API 호출 없음).
+   */
+  private KopisPerformanceDetailDto fetchDetail(String mt20id) {
     String url = UriComponentsBuilder.fromUriString(KOPIS_LIST_URL + "/" + mt20id)
         .queryParam("service", java.net.URLEncoder.encode(serviceKey, java.nio.charset.StandardCharsets.UTF_8))
         .build(true)
@@ -233,7 +261,19 @@ public class PlaceSyncService {
       NodeList items = doc.getElementsByTagName("db");
       if (items.getLength() == 0) return null;
 
-      return text((Element) items.item(0), "mt10id");
+      Element el = (Element) items.item(0);
+      // 예매링크는 <relates><relate><relateurl>...</relateurl></relate>...</relates> 구조로,
+      // 여러 예매처가 있을 수 있어 그중 첫 번째만 사용한다(없으면 null).
+      NodeList relateUrls = el.getElementsByTagName("relateurl");
+      String bookingUrl = relateUrls.getLength() > 0 ? relateUrls.item(0).getTextContent() : null;
+
+      return new KopisPerformanceDetailDto(
+          text(el, "mt10id"),
+          text(el, "prfruntime"),
+          text(el, "pcseguidance"),
+          text(el, "dtguidance"),
+          bookingUrl
+      );
     } catch (Exception e) {
       log.error("KOPIS 공연 상세조회 실패 (mt20id={})", mt20id, e);
       return null;
@@ -283,7 +323,11 @@ public class PlaceSyncService {
           text(el, "prfnm"),
           text(el, "fcltynm"),
           text(el, "poster"),
-          text(el, "genrenm")
+          text(el, "genrenm"),
+          text(el, "prfpdfrom"),
+          text(el, "prfpdto"),
+          text(el, "openrun"),
+          text(el, "prfstate")
       ));
     }
 
@@ -324,6 +368,18 @@ public class PlaceSyncService {
     try {
       return Double.parseDouble(value.trim());
     } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
+  // KOPIS 날짜는 "2026.08.15" 형식(yyyy.MM.dd)으로 내려온다.
+  private static final DateTimeFormatter KOPIS_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+
+  private LocalDate parseKopisDate(String value) {
+    if (value == null || value.isBlank()) return null;
+    try {
+      return LocalDate.parse(value.trim(), KOPIS_DATE_FORMAT);
+    } catch (Exception e) {
       return null;
     }
   }
