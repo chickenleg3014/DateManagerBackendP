@@ -1,8 +1,10 @@
 package org.ict.datemanagerbackend.domain.place.dto;
 
 import org.ict.datemanagerbackend.domain.place.entity.Place;
+import org.ict.datemanagerbackend.domain.place.entity.PlaceStyle;
 
 // 큐레이션/코스빌더 화면에 내려주는 장소 응답 DTO
+// style은 아직 이 place의 place_styles 행이 없을 수도 있어서(예: 새로 동기화된 장소) null 허용.
 public record PlaceResponseDto(
     Long id,
     String name,
@@ -10,10 +12,17 @@ public record PlaceResponseDto(
     String address,
     Double latitude,
     Double longitude,
-    String imageUrl
+    String imageUrl,
+    Integer scoreEnergy,
+    Integer scoreImmersion,
+    Integer scoreVibe,
+    Integer scoreAesthetic,
+    Integer scoreDepth,
+    Integer isIndoor,
+    Integer isActivity
 ) {
 
-  public static PlaceResponseDto from(Place place) {
+  public static PlaceResponseDto from(Place place, PlaceStyle style) {
     return new PlaceResponseDto(
         place.getId(),
         place.getName(),
@@ -21,7 +30,14 @@ public record PlaceResponseDto(
         place.getAddress(),
         place.getLatitude(),
         place.getLongitude(),
-        place.getImageUrl()
+        place.getImageUrl(),
+        style != null ? style.getScoreEnergy() : null,
+        style != null ? style.getScoreImmersion() : null,
+        style != null ? style.getScoreVibe() : null,
+        style != null ? style.getScoreAesthetic() : null,
+        style != null ? style.getScoreDepth() : null,
+        style != null ? style.getIsIndoor() : null,
+        style != null ? style.getIsActivity() : null
     );
   }
 }
