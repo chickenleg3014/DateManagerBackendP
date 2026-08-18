@@ -35,6 +35,11 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
   @Query("SELECT p FROM Place p WHERE p.latitude BETWEEN :minLat AND :maxLat AND p.longitude BETWEEN :minLng AND :maxLng")
   List<Place> findNearby(double minLat, double maxLat, double minLng, double maxLng);
 
+  // 홈탭 "지역 기반 추천"용 - 접속 좌표에서 가까운 순으로 정렬해서 상위 N개를 돌려준다.
+  // 위경도에 인덱스가 없어(위 findNearby 주석 참고) 넓은 사각형(±1도, 대략 100km대)으로 먼저
+  // 후보를 줄인 다음, 그 안에서만 실제 거리(하버사인 공식)를 계산해 정렬한다(2026-08-13 추가).
+  // 서브쿼리에서 ORDER BY까지 끝낸 뒤 바깥에서 ROWNUM으로 자르는 건 오라클의 표준 페이징 패턴.
+  // 오라클엔 RADIANS() 함수가 없어서 degrees * (PI/180) = 0.0174532925199433 을 직접 곱해서 변환한다.
   @Query(value = "SELECT * FROM ("
       + "  SELECT p.*, (6371 * ACOS(LEAST(1, GREATEST(-1, "
       + "    COS(:lat * 0.0174532925199433) * COS(p.latitude * 0.0174532925199433) "
